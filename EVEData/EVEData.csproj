@@ -31,6 +31,9 @@
 	  <None Update="data\POI.csv">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
+	  <None Update="data\invTypes.csv">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	  <None Update="data\ShipTypes.dat">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>

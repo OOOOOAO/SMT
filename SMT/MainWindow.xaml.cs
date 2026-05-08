@@ -28,6 +28,61 @@ using static SMT.EVEData.ZKillRedisQ;
 namespace SMT
 {
     /// <summary>
+    // ── Assets 面板 ViewModel ────────────────────────────────────────────
+
+    /// <summary>单个物品行 ViewModel</summary>
+    public class AssetItemViewModel
+    {
+        public string TypeName         { get; set; }
+        public string QuantityText     { get; set; }
+        public string CharTag          { get; set; }  // "[CharA]" or ""
+        public System.Windows.Visibility CharTagVisibility { get; set; }
+    }
+
+    /// <summary>A unified asset node: either a container (ship/can, expandable) or a plain item.</summary>
+    public class AssetNodeViewModel : System.ComponentModel.INotifyPropertyChanged
+    {
+        public string DisplayName   { get; set; }
+        public string QuantityText  { get; set; }
+        public string CharTag       { get; set; }
+        public System.Windows.Visibility CharTagVisibility { get; set; }
+        public bool IsContainer { get; set; }
+        // Precomputed visibility for the two template rows
+        public System.Windows.Visibility ContainerVisibility  => IsContainer ? System.Windows.Visibility.Visible   : System.Windows.Visibility.Collapsed;
+        public System.Windows.Visibility PlainItemVisibility  => IsContainer ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+        public List<AssetItemViewModel> Children { get; set; } = new List<AssetItemViewModel>();
+        private bool _isExpanded = false;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set { _isExpanded = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsExpanded))); }
+        }
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
+    /// <summary>A station/structure within a system.</summary>
+    public class AssetStationViewModel : System.ComponentModel.INotifyPropertyChanged
+    {
+        public string StationName { get; set; }
+        private bool _isExpanded = false;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set { _isExpanded = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsExpanded))); }
+        }
+        public List<AssetNodeViewModel> Nodes { get; set; } = new List<AssetNodeViewModel>();
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
+    /// <summary>一个星系的资产分组 ViewModel</summary>
+    public class AssetSystemViewModel
+    {
+        public string SystemName { get; set; }
+        public string JumpsText  { get; set; }
+        public int    Jumps      { get; set; }
+        public List<AssetStationViewModel> Stations { get; set; } = new List<AssetStationViewModel>();
+    }
+
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
@@ -61,7 +116,7 @@ namespace SMT
 
         private System.Windows.Forms.NotifyIcon nIcon = new System.Windows.Forms.NotifyIcon();
 
-        private readonly string WindowLayoutVersion = "03";
+        private readonly string WindowLayoutVersion = "04";
 
         private IWavePlayer waveOutEvent;
         private AudioFileReader audioFileReader;
@@ -1200,7 +1255,7 @@ namespace SMT
         private EVEData.LocalCharacter activeCharacter;
 
         public EVEData.LocalCharacter ActiveCharacter
-        { get => activeCharacter; set { activeCharacter = value; OnSelectedCharChangedEventHandler?.Invoke(this, EventArgs.Empty); } }
+        { get => activeCharacter; set { activeCharacter = value; OnSelectedCharChangedEventHandler?.Invoke(this, EventArgs.Empty); RefreshAssetsPanel(); } }
 
         /// <summary>
         ///  Add Character Button Clicked
@@ -2579,6 +2634,217 @@ namespace SMT
                     }
                 }
             }
+        }
+
+        // ── Assets 面板 ─────────────────────────────────────────────────
+
+        private string _assetSearchText = string.Empty;
+        private bool   _assetsMerge     = false;
+
+        private void RefreshAssetsPanel()
+        {
+            if (AssetsListView == null) return;
+
+            var activeChar = ActiveCharacter;
+            if (activeChar == null) { AssetsListView.ItemsSource = null; return; }
+
+            // 收集要显示的字符列表
+            var characters = new List<EVEData.LocalCharacter>();
+            if (_assetsMerge)
+            {
+                foreach (var lc in EVEData.EveManager.Instance.LocalCharacters)
+                    if (lc.ESILinked) characters.Add(lc);
+            }
+            else
+            {
+                characters.Add(activeChar);
+            }
+
+            // 计算跳数用的起点
+            string fromSystem = activeChar.Location ?? string.Empty;
+
+            // 构建 ViewModel 列表
+            var result = new Dictionary<long, AssetSystemViewModel>();
+
+            foreach (var lc in characters)
+            {
+                foreach (var kvp in lc.AssetsBySystem)
+                {
+                    long sysId = kvp.Key;
+                    var sysObj = EVEData.EveManager.Instance.GetEveSystemFromID(sysId);
+                    if (sysObj == null) continue;
+
+                    // 搜索过滤
+                    var filteredItems = kvp.Value
+                        .Where(a => string.IsNullOrEmpty(_assetSearchText) ||
+                                    a.TypeName.IndexOf(_assetSearchText, StringComparison.OrdinalIgnoreCase) >= 0)
+                        .ToList();
+                    if (filteredItems.Count == 0) continue;
+
+                    if (!result.ContainsKey(sysId))
+                    {
+                        // 计算跳数
+                        int jumps = -1;
+                        if (!string.IsNullOrEmpty(fromSystem) && fromSystem != sysObj.Name)
+                        {
+                            var route = EVEData.Navigation.Navigate(
+                                fromSystem, sysObj.Name,
+                                activeChar.UseAnsiblexGates,
+                                activeChar.UseTheraRouting,
+                                activeChar.UseZarzakhRouting,
+                                activeChar.UseTurnurRouting,
+                                activeChar.NavigationMode);
+                            jumps = route != null ? Math.Max(0, route.Count - 1) : -1;
+                        }
+                        else if (fromSystem == sysObj.Name)
+                        {
+                            jumps = 0;
+                        }
+
+                        result[sysId] = new AssetSystemViewModel
+                        {
+                            SystemName = sysObj.Name,
+                            Jumps      = jumps,
+                            JumpsText  = jumps >= 0 ? $"{jumps} jumps" : "? jumps",
+                        };
+                    }
+
+                    // Group by station (LocationPath[0])
+                    var groupedByStation = filteredItems
+                        .GroupBy(a => a.LocationPath != null && a.LocationPath.Count > 0
+                            ? a.LocationPath[0]
+                            : "Unknown Location");
+
+                    foreach (var stationGrp in groupedByStation.OrderBy(g => g.Key))
+                    {
+                        var stationVm = new AssetStationViewModel { StationName = stationGrp.Key };
+
+                        // Items directly in station (LocationPath.Count < 2), sorted by name.
+                        var directItems = stationGrp.Where(a => a.LocationPath == null || a.LocationPath.Count < 2)
+                                                    .OrderBy(a => a.TypeName).ToList();
+
+                        // Build a lookup: parent ItemId -> cargo list (precise, no name collision)
+                        var cargoByParentId = stationGrp
+                            .Where(a => a.LocationPath != null && a.LocationPath.Count >= 2 && a.ParentItemId != 0)
+                            .GroupBy(a => a.ParentItemId)
+                            .ToDictionary(g => g.Key, g => g.ToList());
+
+                        foreach (var asset in directItems)
+                        {
+                            var charTag = _assetsMerge ? $"[{asset.CharacterName}]" : string.Empty;
+                            var charVis = _assetsMerge ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+                            var node = new AssetNodeViewModel
+                            {
+                                DisplayName       = asset.TypeName,
+                                QuantityText      = $"x{asset.Quantity:N0}",
+                                CharTag           = charTag,
+                                CharTagVisibility = charVis,
+                                IsContainer       = asset.IsContainer,
+                            };
+
+                            // Match by ItemId — avoids same-name ship collision
+                            if (asset.IsContainer && cargoByParentId.TryGetValue(asset.ItemId, out var cargo))
+                            {
+                                foreach (var c in cargo.OrderBy(x => x.TypeName))
+                                    node.Children.Add(new AssetItemViewModel
+                                    {
+                                        TypeName          = c.TypeName,
+                                        QuantityText      = $"x{c.Quantity:N0}",
+                                        CharTag           = charTag,
+                                        CharTagVisibility = charVis,
+                                    });
+                            }
+
+                            stationVm.Nodes.Add(node);
+                        }
+
+                        result[sysId].Stations.Add(stationVm);
+                    }
+                }
+            }
+
+            // 按跳数排序，未知跳数排最后
+            var sorted = result.Values
+                .OrderBy(v => v.Jumps < 0 ? int.MaxValue : v.Jumps)
+                .ThenBy(v => v.SystemName)
+                .ToList();
+
+            AssetsListView.ItemsSource = sorted;
+        }
+
+        private void AssetSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _assetSearchText = AssetSearchBox.Text ?? string.Empty;
+            RefreshAssetsPanel();
+        }
+
+        private void AssetsMergeCharacters_Changed(object sender, RoutedEventArgs e)
+        {
+            _assetsMerge = AssetsMergeCharacters.IsChecked == true;
+            RefreshAssetsPanel();
+        }
+
+        private void AssetsListView_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (e.Handled) return;
+            var sv = GetDescendantScrollViewer(AssetsListView);
+            if (sv != null)
+            {
+                sv.ScrollToVerticalOffset(sv.VerticalOffset - e.Delta / 3.0);
+                e.Handled = true;
+            }
+        }
+
+        private static System.Windows.Controls.ScrollViewer GetDescendantScrollViewer(System.Windows.DependencyObject obj)
+        {
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(obj, i);
+                if (child is System.Windows.Controls.ScrollViewer sv) return sv;
+                var found = GetDescendantScrollViewer(child);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private void AssetSetWaypoint_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is string sysName)
+            {
+                var sys = EVEData.EveManager.Instance.GetEveSystem(sysName);
+                if (sys != null && ActiveCharacter != null)
+                    ActiveCharacter.AddDestination(sys.ID, false);
+            }
+        }
+
+        private void AssetsRefreshBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ActiveCharacter == null) return;
+
+            // 对所有 ESI 连接的角色触发资产更新
+            var characters = new List<EVEData.LocalCharacter>();
+            if (_assetsMerge)
+            {
+                foreach (var lc in EVEData.EveManager.Instance.LocalCharacters)
+                    if (lc.ESILinked) characters.Add(lc);
+            }
+            else
+            {
+                characters.Add(ActiveCharacter);
+            }
+
+            foreach (var lc in characters)
+            {
+                // 强制重置缓存时间，下次 Update 时会拉取
+                _ = lc.UpdateAssetsFromESI();
+            }
+
+            // 稍后刷新面板（数据是异步的，给个延迟）
+            var timer = new System.Windows.Threading.DispatcherTimer();
+            timer.Interval = TimeSpan.FromSeconds(3);
+            timer.Tick += (s, args) => { timer.Stop(); RefreshAssetsPanel(); };
+            timer.Start();
         }
     }
 

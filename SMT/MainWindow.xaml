@@ -638,7 +638,191 @@
                                     </DataGrid>
                                 </ScrollViewer>
                             </xcadl:LayoutAnchorable>
+
+                            <xcadl:LayoutAnchorable Title="Planets" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="PlanetsContentID" AutoHideMinHeight="200" AutoHideMinWidth="280" x:Name="avlpPlanets">
+
+                                <Grid x:Name="PlanetsGrid">
+
+                                    <Grid.RowDefinitions>
+
+                                        <RowDefinition Height="Auto"/>
+
+                                        <RowDefinition Height="Auto"/>
+
+                                        <RowDefinition Height="*"/>
+
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0" Margin="4,4,4,2">
+
+                                        <Grid.ColumnDefinitions>
+
+                                            <ColumnDefinition Width="*"/>
+
+                                            <ColumnDefinition Width="Auto"/>
+
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock x:Name="PlanetsCharacterLabel" Grid.Column="0" Text="No Character"
+
+                                                   Foreground="#CCCCCC" FontSize="11" VerticalAlignment="Center" Margin="4,0"/>
+
+                                        <Button x:Name="PlanetsRefreshBtn" Grid.Column="1" Content="⟳ Refresh"
+
+                                                FontSize="11" Padding="6,2" Click="PlanetsRefreshBtn_Click"/>
+
+                                    </Grid>
+
+                                    <CheckBox x:Name="PlanetsMergeCharacters" Grid.Row="1"
+
+                                              Content="Merge Characters" FontSize="11" Margin="8,2,4,2"
+
+                                              Checked="PlanetsMergeCharacters_Changed"
+
+                                              Unchecked="PlanetsMergeCharacters_Changed"/>
+
+                                    <ListView x:Name="PlanetsListView" Grid.Row="2"
+
+                                              FontSize="11" Background="#1A1A1A" BorderThickness="0"
+
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+
+                                              PreviewMouseWheel="PlanetsListView_PreviewMouseWheel">
+
+                                        <ListView.ItemContainerStyle>
+
+                                            <Style TargetType="ListViewItem">
+
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+
+                                                <Setter Property="Padding" Value="0"/>
+
+                                                <Setter Property="Background" Value="Transparent"/>
+
+                                                <Setter Property="BorderThickness" Value="0"/>
+
+                                                <EventSetter Event="MouseDoubleClick" Handler="PlanetItem_DoubleClick"/>
+
+                                            </Style>
+
+                                        </ListView.ItemContainerStyle>
+
+                                        <ListView.ItemTemplate>
+
+                                            <DataTemplate>
+
+                                                <Border BorderBrush="#333333" BorderThickness="0,0,0,1" Padding="6,5">
+
+                                                    <Grid>
+
+                                                        <Grid.RowDefinitions>
+
+                                                            <RowDefinition Height="Auto"/>
+
+                                                            <RowDefinition Height="Auto"/>
+
+                                                            <RowDefinition Height="Auto"/>
+
+                                                            <RowDefinition Height="Auto"/>
+
+                                                            <RowDefinition Height="Auto"/>
+
+                                                        </Grid.RowDefinitions>
+
+                                                        <!-- Row 0: Planet icon + system name + upgrade level -->
+
+                                                        <Grid Grid.Row="0">
+
+                                                            <Grid.ColumnDefinitions>
+
+                                                                <ColumnDefinition Width="Auto"/>
+
+                                                                <ColumnDefinition Width="*"/>
+
+                                                                <ColumnDefinition Width="Auto"/>
+
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Text="{Binding PlanetIcon}" FontSize="13" Margin="0,0,5,0"/>
+
+                                                            <TextBlock Grid.Column="1" Text="{Binding SolarSystemName}"
+
+                                                                       Foreground="#E0E0E0" FontSize="12" FontWeight="SemiBold"/>
+
+                                                            <TextBlock Grid.Column="2" Text="{Binding UpgradeLevelText}"
+
+                                                                       Foreground="#AAAAAA" FontSize="10"/>
+
+                                                        </Grid>
+
+                                                        <!-- Row 1: Planet type + char name -->
+
+                                                        <Grid Grid.Row="1" Margin="18,1,0,1">
+
+                                                            <Grid.ColumnDefinitions>
+
+                                                                <ColumnDefinition Width="*"/>
+
+                                                                <ColumnDefinition Width="Auto"/>
+
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <TextBlock Grid.Column="0" Text="{Binding PlanetTypeAndPins}"
+
+                                                                       Foreground="#999999" FontSize="10"/>
+
+                                                            <TextBlock Grid.Column="1" Text="{Binding CharacterName}"
+
+                                                                       Foreground="#778899" FontSize="10"
+
+                                                                       Visibility="{Binding CharTagVisibility}"/>
+
+                                                        </Grid>
+
+                                                        <!-- Row 2: Extracted resources -->
+
+                                                        <TextBlock Grid.Row="2" Margin="18,1,0,0"
+
+                                                                   Text="{Binding ExtractedResources}"
+
+                                                                   Foreground="#88CC88" FontSize="10"
+
+                                                                   Visibility="{Binding ExtractedVisibility}"/>
+
+                                                        <!-- Row 3: Storage fill -->
+
+                                                        <TextBlock Grid.Row="3" Margin="18,1,0,0"
+
+                                                                   Text="{Binding StorageFillText}"
+
+                                                                   Foreground="{Binding StorageFillColor}" FontSize="10"
+
+                                                                   Visibility="{Binding StorageFillVisibility}"/>
+
+                                                        <!-- Row 4: Expiry status -->
+
+                                                        <TextBlock Grid.Row="4" Margin="18,1,0,0"
+
+                                                                   Text="{Binding ExpiryText}"
+
+                                                                   Foreground="{Binding ExpiryColor}" FontSize="10"/>
+
+                                                    </Grid>
+
+                                                </Border>
+
+                                            </DataTemplate>
+
+                                        </ListView.ItemTemplate>
+
+                                    </ListView>
+
+                                </Grid>
+
+                            </xcadl:LayoutAnchorable>
+
                         </xcadl:LayoutAnchorablePane>
+
                         <xcadl:LayoutAnchorablePane>
                             <xcadl:LayoutAnchorable Title="Assets" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="AssetsContentID" AutoHideMinHeight="200" AutoHideMinWidth="280" x:Name="avlpAssets">
                                 <Grid x:Name="AssetsGrid">
@@ -770,6 +954,7 @@
                                 </Grid>
                             </xcadl:LayoutAnchorable>
                         </xcadl:LayoutAnchorablePane>
+
                     </xcadl:LayoutAnchorablePaneGroup>
 
                     <xcadl:LayoutDocumentPane ShowHeader="True" AllowDuplicateContent="False">

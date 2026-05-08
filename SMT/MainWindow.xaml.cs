@@ -116,10 +116,18 @@ namespace SMT
 
         private System.Windows.Forms.NotifyIcon nIcon = new System.Windows.Forms.NotifyIcon();
 
-        private readonly string WindowLayoutVersion = "04";
+        private readonly string WindowLayoutVersion = EveAppConfig.SMT_VERSION;
 
         private IWavePlayer waveOutEvent;
+
         private AudioFileReader audioFileReader;
+
+
+
+        private bool _planetsMerge = false;
+
+
+
         public void UpdateTabTitles()
         {
             try
@@ -1255,6 +1263,8 @@ namespace SMT
         private EVEData.LocalCharacter activeCharacter;
 
         public EVEData.LocalCharacter ActiveCharacter
+
+        { get => activeCharacter; set { activeCharacter = value; OnSelectedCharChangedEventHandler?.Invoke(this, EventArgs.Empty); RefreshPlanetsPanel(); } }
         { get => activeCharacter; set { activeCharacter = value; OnSelectedCharChangedEventHandler?.Invoke(this, EventArgs.Empty); RefreshAssetsPanel(); } }
 
         /// <summary>
@@ -2619,22 +2629,328 @@ namespace SMT
         }
 
         private void MetaliminalStormList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+
         {
+
             if(MetaliminalStormList.SelectedIndex != -1)
+
             {
+
                 EVEData.Storm selectedStorm = MetaliminalStormList.SelectedItem as EVEData.Storm;
+
                 if(selectedStorm != null)
+
                 {
+
                     // Select the system in the map
+
                     RegionUC.SelectSystem(selectedStorm.System, true);
+
                     // If the region doc is not selected, select it
+
                     if(RegionLayoutDoc != null && !RegionLayoutDoc.IsSelected)
+
                     {
+
                         RegionLayoutDoc.IsSelected = true;
+
                     }
+
                 }
+
+            }
+
+        }
+
+
+
+        #region PlanetsPanel
+
+
+
+        private void RefreshPlanetsPanel()
+
+        {
+
+            if (PlanetsListView == null) return;
+
+
+
+            var activeChar = ActiveCharacter;
+
+
+
+            if (activeChar == null)
+
+            {
+
+                PlanetsListView.ItemsSource = null;
+
+                PlanetsCharacterLabel.Text = "No Character";
+
+                return;
+
+            }
+
+
+
+            // Collect characters to display
+
+            var characters = new List<EVEData.LocalCharacter>();
+
+
+
+            if (_planetsMerge)
+
+            {
+
+                foreach (var lc in EVEData.EveManager.Instance.LocalCharacters)
+
+                    if (lc.ESILinked) characters.Add(lc);
+
+            }
+
+            else
+
+            {
+
+                characters.Add(activeChar);
+
+            }
+
+
+
+            // Build view-model rows
+
+            var rows = new List<PlanetRowViewModel>();
+
+
+
+            foreach (var lc in characters)
+
+            {
+
+                foreach (var colony in lc.Colonies)
+
+                {
+
+                    rows.Add(new PlanetRowViewModel(colony, _planetsMerge));
+
+                }
+
+            }
+
+
+
+            // Sort by solar system name
+
+            var sorted = rows.OrderBy(r => r.SolarSystemName).ToList();
+
+
+
+            PlanetsListView.ItemsSource = sorted;
+
+
+
+            // Update label
+
+            if (_planetsMerge)
+
+                PlanetsCharacterLabel.Text = $"All Characters ({rows.Count} colonies)";
+
+            else
+
+                PlanetsCharacterLabel.Text = $"{activeChar.Name} ({rows.Count} colonies)";
+
+        }
+
+
+
+        private void PlanetsRefreshBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+
+        {
+
+            if (ActiveCharacter == null) return;
+
+
+
+            var characters = new List<EVEData.LocalCharacter>();
+
+
+
+            if (_planetsMerge)
+
+            {
+
+                foreach (var lc in EVEData.EveManager.Instance.LocalCharacters)
+
+                    if (lc.ESILinked) characters.Add(lc);
+
+            }
+
+            else
+
+            {
+
+                characters.Add(ActiveCharacter);
+
+            }
+
+
+
+            foreach (var lc in characters)
+
+            {
+
+                _ = lc.UpdatePlanetsFromESI();
+
+            }
+
+
+
+            // Refresh after a short delay to allow async data to come back
+
+            var timer = new System.Windows.Threading.DispatcherTimer();
+
+            timer.Interval = TimeSpan.FromSeconds(5);
+
+            timer.Tick += (s, args) => { timer.Stop(); RefreshPlanetsPanel(); };
+
+            timer.Start();
+
+        }
+
+
+
+        private void PlanetsMergeCharacters_Changed(object sender, System.Windows.RoutedEventArgs e)
+
+        {
+
+            _planetsMerge = PlanetsMergeCharacters.IsChecked == true;
+
+            RefreshPlanetsPanel();
+
+        }
+
+
+
+        private void PlanetsListView_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+
+        {
+
+            if (e.Handled) return;
+
+
+
+            var sv = GetDescendantScrollViewer(PlanetsListView);
+
+
+
+            if (sv != null)
+
+            {
+
+                sv.ScrollToVerticalOffset(sv.VerticalOffset - e.Delta / 3.0);
+
+                e.Handled = true;
+
+            }
+
+        }
+
+
+
+        private void PlanetItem_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+
+        {
+
+            if (PlanetsListView.SelectedItem is PlanetRowViewModel vm && ActiveCharacter != null)
+
+            {
+
+                var sys = EVEData.EveManager.Instance.GetEveSystemFromID(vm.SolarSystemId);
+
+
+
+                if (sys != null)
+
+                    ActiveCharacter.AddDestination(sys.ID, false);
+
+            }
+
+        }
+
+
+
+        private static System.Windows.Controls.ScrollViewer GetDescendantScrollViewer(System.Windows.DependencyObject obj)
+
+        {
+
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj); i++)
+
+            {
+
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(obj, i);
+
+                if (child is System.Windows.Controls.ScrollViewer sv) return sv;
+
+                var found = GetDescendantScrollViewer(child);
+
+                if (found != null) return found;
+
+            }
+
+            return null;
+
+        }
+
+
+
+        #endregion PlanetsPanel
+
+    }
+
+    /// <summary>
+    /// View-model wrapper for a single PlanetaryColony row in the Planets panel.
+    /// </summary>
+    public class PlanetRowViewModel
+    {
+        private readonly EVEData.PlanetaryColony _colony;
+        private readonly bool _showChar;
+
+        public PlanetRowViewModel(EVEData.PlanetaryColony colony, bool showChar)
+        {
+            _colony = colony;
+            _showChar = showChar;
+        }
+
+        public string SolarSystemName => _colony.SolarSystemName;
+        public string PlanetIcon => _colony.PlanetIcon;
+        public string PlanetType => _colony.PlanetType;
+        public string CharacterName => $"[{_colony.CharacterName}]";
+        public int UpgradeLevel => _colony.UpgradeLevel;
+        public string UpgradeLevelText => $"Lv{_colony.UpgradeLevel} · {_colony.NumPins} pins";
+        public string PlanetTypeAndPins
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_colony.PlanetType)) return "Unknown";
+                return char.ToUpper(_colony.PlanetType[0]) + _colony.PlanetType.Substring(1).ToLower();
             }
         }
+        public string ExpiryText => _colony.ExpiryText;
+        public string ExpiryColor => _colony.ExpiryColor;
+        public System.Windows.Visibility CharTagVisibility =>
+            _showChar ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        public long SolarSystemId => _colony.SolarSystemId;
+        public string ExtractedResources => _colony.ExtractedResources;
+        public string StorageFillText => _colony.StorageFillText;
+        public string StorageFillColor => _colony.StorageFillColor;
+        public System.Windows.Visibility ExtractedVisibility =>
+            string.IsNullOrEmpty(_colony.ExtractedResources) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+        public System.Windows.Visibility StorageFillVisibility =>
+            string.IsNullOrEmpty(_colony.StorageFillText) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+
 
         // ── Assets 面板 ─────────────────────────────────────────────────
 

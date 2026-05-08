@@ -360,3 +360,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 *.p7s
+/.alma-snapshots
+/.idea

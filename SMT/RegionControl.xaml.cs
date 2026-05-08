@@ -357,6 +357,7 @@ namespace SMT
             }
         }
 
+
         public bool ShowSovOwner
         {
             get
@@ -850,6 +851,7 @@ namespace SMT
             AddCharactersToMap();
             AddDataToMap();
             AddSystemIntelOverlay();
+            AddAssetCirclesToMap();
             AddHighlightToSystem(SelectedSystem);
 
             if(MapConf.DrawRoute)
@@ -1438,7 +1440,6 @@ namespace SMT
                     infoSize = infoValue * ESIOverlayScale;
                 }
 
-                if(ShowSystemTimers && MapConf.ShowIhubVunerabilities)
                 {
                     DateTime now = DateTime.Now;
 
@@ -2125,6 +2126,48 @@ namespace SMT
             }
             catch
             {
+            }
+        }
+
+        /// <summary>
+        /// Draws a fixed-size blue outline circle around systems where the active character has assets.
+        /// </summary>
+        private void AddAssetCirclesToMap()
+        {
+            if (ActiveCharacter == null)
+                return;
+
+            const double assetCircleSize = 34;
+            const double assetCircleOffset = assetCircleSize / 2;
+
+            foreach (MapSystem ms in Region.MapSystems.Values.ToList())
+            {
+                if (ms.ActualSystem == null)
+                    continue;
+
+                long sysId = ms.ActualSystem.ID;
+                bool hasAssets = ActiveCharacter.AssetsBySystem.ContainsKey(sysId)
+                              && ActiveCharacter.AssetsBySystem[sysId].Count > 0;
+
+                if (!hasAssets)
+                    continue;
+
+                Shape assetCircle = new Ellipse()
+                {
+                    Height          = assetCircleSize,
+                    Width           = assetCircleSize,
+                    Stroke          = new SolidColorBrush(Color.FromRgb(0x44, 0x9D, 0xFF)),
+                    StrokeThickness = 2,
+                    Fill            = Brushes.Transparent,
+                    IsHitTestVisible = false,
+                };
+
+                Canvas.SetLeft(assetCircle, ms.Layout.X - assetCircleOffset);
+                Canvas.SetTop(assetCircle,  ms.Layout.Y - assetCircleOffset);
+                Canvas.SetZIndex(assetCircle, ZINDEX_CHARACTERS - 2);
+
+                MainCanvas.Children.Add(assetCircle);
+                DynamicMapElements.Add(assetCircle);
             }
         }
 

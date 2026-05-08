@@ -485,6 +485,11 @@ namespace SMT
                 // Update app language (static on EveManager; no Instance required)
                 SMT.EVEData.EveManager.CurrentLanguage = langCode;
 
+                // Clear per-language ItemTypes cache so next asset refresh re-fetches in new language
+                // Also clear character asset caches that are in the old language
+                foreach (var lc in EVEData.EveManager.Instance.LocalCharacters)
+                    lc.AssetsBySystem = new Dictionary<long, List<EVEData.AssetEntry>>();
+
                 // Redraw maps so labels use the new language
                 if (MainWindow.AppWindow != null)
                 {

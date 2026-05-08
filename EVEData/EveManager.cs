@@ -676,9 +676,94 @@ namespace SMT.EVEData
         public SerializableDictionary<string, string> ShipTypes { get; set; }
 
         /// <summary>
+        /// Maps all item type IDs to their names (loaded from invTypes.csv)
+        /// </summary>
+        public Dictionary<long, string> ItemTypes { get; set; } = new Dictionary<long, string>();
+
+        // Per-language type name cache: language_code -> (typeId -> name)
+        private Dictionary<string, Dictionary<long, string>> _itemTypesByLang = new Dictionary<string, Dictionary<long, string>>();
+
+        public static string GetESILanguageCode()
+        {
+            return CurrentLanguage switch
+            {
+                "zh-CN" => "zh",
+                "de-DE" => "de",
+                "fr-FR" => "fr",
+                "ja-JP" => "ja",
+                "ru-RU" => "ru",
+                "ko-KR" => "ko",
+                _ => "en-us",
+            };
+        }
+
+        public string GetItemTypeName(long typeId)
+        {
+            string lang = GetESILanguageCode();
+            if (lang != "en-us" && _itemTypesByLang.TryGetValue(lang, out var langDict) && langDict.TryGetValue(typeId, out var localizedName))
+                return localizedName;
+            if (ItemTypes.TryGetValue(typeId, out var name))
+                return name;
+            return null;
+        }
+
+        public async Task FetchTypeNamesWithLanguageAsync(List<long> typeIds, string esiLang)
+        {
+            if (typeIds.Count == 0) return;
+            if (!_itemTypesByLang.ContainsKey(esiLang))
+                _itemTypesByLang[esiLang] = new Dictionary<long, string>();
+            var langDict = _itemTypesByLang[esiLang];
+            var unknownIds = typeIds.Where(id => !langDict.ContainsKey(id)).ToList();
+            if (unknownIds.Count == 0) return;
+
+            const int batchSize = 1000;
+            for (int b = 0; b < unknownIds.Count; b += batchSize)
+            {
+                var batch = unknownIds.Skip(b).Take(batchSize).ToList();
+                try
+                {
+                    var payload = Newtonsoft.Json.JsonConvert.SerializeObject(batch);
+                    using var request = new HttpRequestMessage(
+                        HttpMethod.Post,
+                        "https://esi.evetech.net/latest/universe/names/?datasource=tranquility");
+                    request.Headers.Add("Accept-Language", esiLang);
+                    request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+                    using var hc = new HttpClient();
+                    hc.Timeout = TimeSpan.FromSeconds(30);
+                    var response = await hc.SendAsync(request);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync();
+                        var entries = Newtonsoft.Json.JsonConvert.DeserializeObject<List<UniverseNameEntry>>(json);
+                        if (entries != null)
+                            foreach (var e in entries)
+                                if (e.Category == "inventory_type")
+                                    langDict[e.Id] = e.Name;
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private class UniverseNameEntry
+        {
+            [Newtonsoft.Json.JsonProperty("id")]
+            public long Id { get; set; }
+            [Newtonsoft.Json.JsonProperty("name")]
+            public string Name { get; set; }
+            [Newtonsoft.Json.JsonProperty("category")]
+            public string Category { get; set; }
+        }
+
+        /// <summary>
         /// Gets or sets the System ID to Name dictionary
         /// </summary>
         public SerializableDictionary<long, string> SystemIDToName { get; set; }
+
+        /// <summary>
+        /// Maps NPC station IDs to their solar system IDs (loaded from staStations.csv)
+        /// </summary>
+        public Dictionary<long, long> StationIDToSystemID { get; set; } = new Dictionary<long, long>();
 
         /// <summary>
         /// Gets or sets the master List of Systems
@@ -1081,6 +1166,8 @@ namespace SMT.EVEData
                     if(SS != null)
                     {
                         SS.HasNPCStation = true;
+                        long stationID = long.Parse(bits[0]);
+                        StationIDToSystemID[stationID] = stationSystem;
                     }
                 }
             }
@@ -1717,6 +1804,10 @@ namespace SMT.EVEData
                     string groupID = bits[1];
                     string ItemName = bits[2];
 
+                    // 填充全量 type 映射（供资产面板使用）
+                    if (long.TryParse(typeID, out long typeIdLong) && !string.IsNullOrEmpty(ItemName))
+                        ItemTypes[typeIdLong] = ItemName;
+
                     if(ValidShipGroupIDs.Contains(groupID))
                     {
                         ShipTypes.Add(typeID, ItemName);
@@ -2230,6 +2321,35 @@ namespace SMT.EVEData
             Systems = Serialization.DeserializeFromDisk<List<System>>(Path.Combine(DataRootFolder, "Systems.dat"));
 
             ShipTypes = Serialization.DeserializeFromDisk<SerializableDictionary<string, string>>(Path.Combine(DataRootFolder, "ShipTypes.dat"));
+
+            // Load item type names from invTypes.csv (typeID,groupID,typeName,...)
+            string invTypesPath = Path.Combine(DataRootFolder, "invTypes.csv");
+            if (File.Exists(invTypesPath))
+            {
+                try
+                {
+                    using (var reader = new StreamReader(invTypesPath))
+                    {
+                        reader.ReadLine(); // skip header
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            if (string.IsNullOrEmpty(line)) continue;
+                            int first  = line.IndexOf(',');
+                            int second = first >= 0 ? line.IndexOf(',', first + 1) : -1;
+                            int third  = second >= 0 ? line.IndexOf(',', second + 1) : -1;
+                            if (first < 0 || second < 0) continue;
+                            string typeIdStr = line.Substring(0, first);
+                            string typeName  = third >= 0
+                                ? line.Substring(second + 1, third - second - 1)
+                                : line.Substring(second + 1);
+                            if (long.TryParse(typeIdStr, out long typeId) && !string.IsNullOrEmpty(typeName))
+                                ItemTypes[typeId] = typeName;
+                        }
+                    }
+                }
+                catch { }
+            }
 
             foreach(System s in Systems)
             {
@@ -3088,16 +3208,64 @@ namespace SMT.EVEData
             {
                 "publicData",
                 "esi-location.read_location.v1",
+                "esi-location.read_ship_type.v1",
+                "esi-skills.read_skills.v1",
+                "esi-skills.read_skillqueue.v1",
+                "esi-wallet.read_character_wallet.v1",
+                "esi-wallet.read_corporation_wallet.v1",
                 "esi-search.search_structures.v1",
-                "esi-clones.read_clones.v1",
+                "esi-characters.read_contacts.v1",
+                "esi-universe.read_structures.v1",
+                "esi-corporations.read_corporation_membership.v1",
+                "esi-assets.read_assets.v1",
+                "esi-planets.manage_planets.v1",
+                "esi-fleets.read_fleet.v1",
+                "esi-fleets.write_fleet.v1",
+                "esi-ui.open_window.v1",
                 "esi-ui.write_waypoint.v1",
+                "esi-characters.write_contacts.v1",
+                "esi-markets.structure_markets.v1",
+                "esi-corporations.read_structures.v1",
+                "esi-characters.read_loyalty.v1",
+                "esi-characters.read_chat_channels.v1",
+                "esi-characters.read_medals.v1",
                 "esi-characters.read_standings.v1",
+                "esi-characters.read_agents_research.v1",
+                "esi-industry.read_character_jobs.v1",
+                "esi-markets.read_character_orders.v1",
+                "esi-characters.read_blueprints.v1",
+                "esi-characters.read_corporation_roles.v1",
                 "esi-location.read_online.v1",
                 "esi-characters.read_fatigue.v1",
+                "esi-corporations.track_members.v1",
+                "esi-wallet.read_corporation_wallets.v1",
+                "esi-characters.read_notifications.v1",
+                "esi-corporations.read_divisions.v1",
                 "esi-corporations.read_contacts.v1",
+                "esi-assets.read_corporation_assets.v1",
+                "esi-corporations.read_titles.v1",
+                "esi-corporations.read_blueprints.v1",
+                "esi-corporations.read_standings.v1",
+                "esi-corporations.read_starbases.v1",
+                "esi-industry.read_corporation_jobs.v1",
+                "esi-markets.read_corporation_orders.v1",
+                "esi-corporations.read_container_logs.v1",
+                "esi-industry.read_character_mining.v1",
+                "esi-industry.read_corporation_mining.v1",
+                "esi-planets.read_customs_offices.v1",
+                "esi-corporations.read_facilities.v1",
+                "esi-corporations.read_medals.v1",
+                "esi-characters.read_titles.v1",
                 "esi-alliances.read_contacts.v1",
-                "esi-universe.read_structures.v1",
-                "esi-fleets.read_fleet.v1"
+                "esi-characters.read_fw_stats.v1",
+                "esi-corporations.read_fw_stats.v1",
+                "esi-corporations.read_projects.v1",
+                "esi-corporations.read_freelance_jobs.v1",
+                "esi-characters.read_freelance_jobs.v1",
+                "esi-structures.read_corporation.v1",
+                "esi-structures.read_character.v1",
+                "esi-activities.read_character.v1",
+                "esi-access.read_lists.v1"
             };
 
             foreach(MapRegion rr in Regions)
@@ -3668,6 +3836,9 @@ namespace SMT.EVEData
 
                     AddCharacter(c);
                 }
+
+                foreach (LocalCharacter c in GetLocalCharactersCopy())
+                    c.LoadAssetsFromCache();
             }
             catch
             {

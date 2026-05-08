@@ -32,7 +32,7 @@ namespace SMT
 
             try
             {
-                listener.Prefixes.Add(EVEData.EveAppConfig.CallbackURL);
+                listener.Prefixes.Add(EVEData.EveAppConfig.CallbackURL + "/");
                 listener.Start();
 
                 while (!serverDone)

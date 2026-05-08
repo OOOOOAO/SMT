@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text;
 using System.Xml.Serialization;
 using EVEStandard.Models;
 using EVEStandard.Models.API;
@@ -7,6 +8,51 @@ using EVEStandard.Models.SSO;
 namespace SMT.EVEData
 {
     //jumpclones
+    /// <summary>
+    /// Represents a single asset item in a solar system.
+    /// </summary>
+    public class AssetEntry
+    {
+        public long TypeId { get; set; }
+        public string TypeName { get; set; }
+        public long Quantity { get; set; }
+        public string LocationFlag { get; set; }
+        public string CharacterName { get; set; }
+
+        /// <summary>
+        /// The ESI item_id of this asset. Used to detect containers.
+        /// </summary>
+        public long ItemId { get; set; }
+
+        /// <summary>
+        /// True if other assets list this item as their parent (i.e. it's a ship/container with contents).
+        /// Items flagged true should appear as expandable container headers, not in the flat standalone list.
+        /// </summary>
+        public bool IsContainer { get; set; }
+
+        /// <summary>
+        /// The ItemId of the direct parent container (ship/can). 0 if directly in station.
+        /// </summary>
+        public long ParentItemId { get; set; }
+
+        /// <summary>
+        /// Resolved location path from outermost container to direct parent.
+        /// Empty = item directly in station hangar or solar system.
+        /// e.g. ["Jita Trading Hub"] = item in player structure.
+        /// e.g. ["Jita Trading Hub", "My Caracal"] = item in ship in structure.
+        /// </summary>
+        public List<string> LocationPath { get; set; } = new List<string>();
+    }
+
+
+    public class AssetCacheWrapper
+    {
+        public int    Version       { get; set; } = 2;   // bump when AssetEntry schema changes
+        public string CharacterName { get; set; }
+        public string Language      { get; set; }
+        public DateTime UpdatedAt   { get; set; }
+        public Dictionary<long, List<AssetEntry>> AssetsBySystem { get; set; }
+    }
 
     public class LocalCharacter : Character, INotifyPropertyChanged 
     {
@@ -69,6 +115,7 @@ namespace SMT.EVEData
         private int m_activeRouteLength = 0;
 
         private bool m_updateTick = true;
+        private DateTime m_nextAssetUpdate = DateTime.MinValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Character" /> class
@@ -222,6 +269,13 @@ namespace SMT.EVEData
         /// </summary>
         [XmlIgnoreAttribute]
         public Fleet FleetInfo { get; set; }
+
+        /// <summary>
+        /// Gets assets grouped by solar system ID. Key = solar system ID, Value = asset count.
+        /// Updated by UpdateAssetsFromESI().
+        /// </summary>
+        [XmlIgnoreAttribute]
+        public Dictionary<long, List<AssetEntry>> AssetsBySystem { get; set; } = new Dictionary<long, List<AssetEntry>>();
 
         /// <summary>
         /// Fleet Updated Event Handler
@@ -1304,6 +1358,306 @@ namespace SMT.EVEData
                     WarningSystems.Clear();
                 }
             }
+
+        }
+        /// Fetches character assets from ESI and builds AssetsBySystem.
+        /// <summary>
+        /// Each entry includes type name, quantity, location flag, character name,
+        /// and a resolved LocationPath for nested items (player structures, ships, containers).
+        /// Cached for 1 hour to match ESI TTL.
+        /// </summary>
+        public async Task UpdateAssetsFromESI()
+        {
+            if (m_nextAssetUpdate > DateTime.Now)
+                return;
+
+            AuthDTO auth = GetAuthDTO();
+            if (auth == null || ID == 0 || !ESILinked)
+                return;
+
+            if (string.IsNullOrEmpty(ESIScopesStored) || !ESIScopesStored.Contains("esi-assets.read_assets.v1"))
+                return;
+
+            try
+            {
+                // Phase 1: Fetch ALL pages and build item map
+                var allAssets = new List<EVEStandard.Models.Asset>();
+                var itemMap   = new Dictionary<long, EVEStandard.Models.Asset>();
+                int page = 1, maxPage = 1;
+                do
+                {
+                    var esr = await EveManager.Instance.EveApiClient.Assets.GetCharacterAssetsAsync(auth, page);
+                    if (!ESIHelpers.ValidateESICall(esr) || esr.Model == null)
+                        break;
+                    maxPage = esr.MaxPages > 0 ? esr.MaxPages : 1;
+                    foreach (var a in esr.Model)
+                    {
+                        allAssets.Add(a);
+                        itemMap[a.ItemId] = a;
+                    }
+                    page++;
+                }
+                while (page <= maxPage);
+
+                // Phase 1b: Resolve type names for any TypeIds not already in ItemTypes cache
+                // (invTypes.csv is only used at DataGen time; at runtime we call /universe/names/)
+                {
+                    var unknownTypeIds = allAssets
+                        .Select(a => a.TypeId)
+                        .Distinct()
+                        .Where(id => !EveManager.Instance.ItemTypes.ContainsKey(id))
+                        .ToList();
+
+                    const int typeNameBatch = 1000;
+                    for (int b = 0; b < unknownTypeIds.Count; b += typeNameBatch)
+                    {
+                        var batch = unknownTypeIds.Skip(b).Take(typeNameBatch).ToList();
+                        try
+                        {
+                            var nr = await EveManager.Instance.EveApiClient.Universe
+                                         .GetNamesAndCategoriesFromIdsAsync(batch);
+                            if (ESIHelpers.ValidateESICall(nr) && nr.Model != null)
+                            {
+                                foreach (var entry in nr.Model)
+                                {
+                                    if (entry.Category == "inventory_type")
+                                        EveManager.Instance.ItemTypes[entry.Id] = entry.Name;
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // Phase 1c: Batch-resolve NPC station names via /universe/names/
+                var stationNameMap = new Dictionary<long, string>();
+                {
+                    var stationIds = allAssets
+                        .Where(a => a.LocationType == "station")
+                        .Select(a => a.LocationId)
+                        .Distinct()
+                        .ToList();
+                    if (stationIds.Count > 0)
+                    {
+                        const int stBatch = 1000;
+                        for (int b = 0; b < stationIds.Count; b += stBatch)
+                        {
+                            var batch = stationIds.Skip(b).Take(stBatch).ToList();
+                            try
+                            {
+                                var nr = await EveManager.Instance.EveApiClient.Universe
+                                             .GetNamesAndCategoriesFromIdsAsync(batch);
+                                if (ESIHelpers.ValidateESICall(nr) && nr.Model != null)
+                                    foreach (var entry in nr.Model)
+                                        if (entry.Category == "station")
+                                            stationNameMap[entry.Id] = entry.Name;
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                // Phase 1d: If language is not English, fetch localized names
+                string esiLang = EveManager.GetESILanguageCode();
+                if (esiLang != "en-us")
+                {
+                    var allTypeIds = allAssets.Select(a => a.TypeId).Distinct().ToList();
+                    await EveManager.Instance.FetchTypeNamesWithLanguageAsync(allTypeIds, esiLang);
+                }
+
+                // Phase 2: Batch-resolve container names (ships, citadels, structures with custom names)
+                // NOTE: GetCharacterAssetNamesAsync only returns items that have customisable names
+                // (ships, containers, Upwell structures). Regular items are NOT returned — their
+                // type names come from ItemTypes (populated in Phase 1b above).
+                var itemNameMap = new Dictionary<long, string>();
+                var itemIdsForNames = new HashSet<long>();
+                foreach (var a in allAssets)
+                {
+                    // Only the direct parent containers need name resolution
+                    if (a.LocationType == "item")
+                        itemIdsForNames.Add(a.LocationId);
+                }
+                const int batchSize = 1000;
+                var idList = itemIdsForNames.ToList();
+                for (int b = 0; b < idList.Count; b += batchSize)
+                {
+                    var batch = idList.Skip(b).Take(batchSize).ToList();
+                    try
+                    {
+                        var nameResult = await EveManager.Instance.EveApiClient.Assets.GetCharacterAssetNamesAsync(auth, batch);
+                        if (ESIHelpers.ValidateESICall(nameResult) && nameResult.Model != null)
+                            foreach (var n in nameResult.Model)
+                                itemNameMap[n.ItemId] = n.Name;
+                    }
+                    catch { }
+                }
+
+                // Phase 3: Recursive resolver => (solarSystemId, locationPath)
+                bool canReadStructures = !string.IsNullOrEmpty(ESIScopesStored)
+                    && ESIScopesStored.Contains("esi-universe.read_structures.v1");
+                var structureSystemCache = new Dictionary<long, (long sysId, string name)>();
+
+                async Task<(long sysId, List<string> path)> ResolveAsset(
+                    EVEStandard.Models.Asset asset, int depth)
+                {
+                    if (depth > 10)
+                        return (0, new List<string>());
+                    if (asset.LocationType == "solar_system")
+                        return (asset.LocationId, new List<string>());
+                    if (asset.LocationType == "station")
+                    {
+                        long sysId = 0;
+                        if (EveManager.Instance.StationIDToSystemID.ContainsKey(asset.LocationId))
+                            sysId = EveManager.Instance.StationIDToSystemID[asset.LocationId];
+                        else
+                        {
+                            var sys = EveManager.Instance.GetEveSystemFromID(asset.LocationId);
+                            if (sys != null) sysId = sys.ID;
+                        }
+                        return (sysId, stationNameMap.TryGetValue(asset.LocationId, out var sn)
+                            ? new List<string> { sn }
+                            : new List<string> { $"Station [{asset.LocationId}]" });
+                    }
+                    if (asset.LocationType == "item")
+                    {
+                        long locId = asset.LocationId;
+
+                        // Resolve container display name: prefer TypeName, append custom name if present
+                        string containerName;
+                        string customName = itemNameMap.ContainsKey(locId) ? itemNameMap[locId] : null;
+                        if (itemMap.ContainsKey(locId))
+                        {
+                            long containerTypeId = itemMap[locId].TypeId;
+                            string typeName = EveManager.Instance.GetItemTypeName(containerTypeId)
+                                ?? string.Format("Unknown [{0}]", containerTypeId);
+                            containerName = customName != null ? $"{typeName} \"{customName}\"" : typeName;
+                        }
+                        else
+                        {
+                            containerName = customName ?? string.Format("Container [{0}]", locId);
+                        }
+
+                        if (itemMap.ContainsKey(locId))
+                        {
+                            var (parentSysId, parentPath) = await ResolveAsset(itemMap[locId], depth + 1);
+                            var path = new List<string>(parentPath) { containerName };
+                            return (parentSysId, path);
+                        }
+                        else if (locId > 1000000000000L)
+                        {
+                            if (structureSystemCache.ContainsKey(locId))
+                            {
+                                var cached = structureSystemCache[locId];
+                                return (cached.sysId, new List<string> { cached.name });
+                            }
+                            if (canReadStructures)
+                            {
+                                try
+                                {
+                                    var structResult = await EveManager.Instance.EveApiClient.Universe
+                                        .GetStructureInfoAsync(auth, locId);
+                                    if (ESIHelpers.ValidateESICall(structResult) && structResult.Model != null)
+                                    {
+                                        string structName = structResult.Model.Name
+                                            ?? string.Format("Structure [{0}]", locId);
+                                        long structSysId = structResult.Model.SolarSystemId;
+                                        structureSystemCache[locId] = (structSysId, structName);
+                                        return (structSysId, new List<string> { structName });
+                                    }
+                                }
+                                catch { }
+                            }
+                            string fallbackName = itemNameMap.ContainsKey(locId)
+                                ? itemNameMap[locId]
+                                : string.Format("Structure [{0}]", locId);
+                            return (0, new List<string> { fallbackName });
+                        }
+                    }
+                    return (0, new List<string>());
+                }
+
+                // Phase 4: Build AssetsBySystem with LocationPath
+                // Pre-compute which item IDs act as containers (other items list them as parent)
+                var containerItemIds = new HashSet<long>(
+                    allAssets
+                        .Where(a => a.LocationType == "item" && itemMap.ContainsKey(a.LocationId))
+                        .Select(a => a.LocationId));
+
+                var newAssetsBySystem = new Dictionary<long, List<AssetEntry>>();
+                foreach (var asset in allAssets)
+                {
+                    try
+                    {
+                        var (solarSystemId, locationPath) = await ResolveAsset(asset, 0);
+                        if (solarSystemId <= 0)
+                            continue;
+                        string typeName = EveManager.Instance.GetItemTypeName(asset.TypeId)
+                            ?? string.Format("Unknown ({0})", asset.TypeId);
+                        var entry = new AssetEntry
+                        {
+                            TypeId        = asset.TypeId,
+                            TypeName      = typeName,
+                            Quantity      = asset.Quantity,
+                            LocationFlag  = asset.LocationFlag,
+                            CharacterName = Name,
+                            LocationPath  = locationPath,
+                            ItemId        = asset.ItemId,
+                            IsContainer   = containerItemIds.Contains(asset.ItemId),
+                            ParentItemId  = asset.LocationType == "item" && itemMap.ContainsKey(asset.LocationId) ? asset.LocationId : 0,
+                        };
+                        if (!newAssetsBySystem.ContainsKey(solarSystemId))
+                            newAssetsBySystem[solarSystemId] = new List<AssetEntry>();
+                        newAssetsBySystem[solarSystemId].Add(entry);
+                    }
+                    catch { }
+                }
+                AssetsBySystem = newAssetsBySystem;
+                SaveAssetsToCache();
+                m_nextAssetUpdate = DateTime.Now.AddSeconds(3600);
+            }
+            catch { }
+        }
+
+        private string GetAssetCacheFilePath()
+        {
+            string safeName = string.Concat(Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+            return Path.Combine(EVEData.EveManager.Instance.SaveDataRootFolder, $"Assets_{safeName}.json");
+        }
+
+        public void SaveAssetsToCache()
+        {
+            try
+            {
+                var wrapper = new AssetCacheWrapper
+                {
+                    CharacterName  = Name,
+                    Language       = EveManager.CurrentLanguage,
+                    UpdatedAt      = DateTime.UtcNow,
+                    AssetsBySystem = AssetsBySystem,
+                };
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(wrapper, Newtonsoft.Json.Formatting.None);
+                File.WriteAllText(GetAssetCacheFilePath(), json, Encoding.UTF8);
+            }
+            catch { }
+        }
+
+        public void LoadAssetsFromCache()
+        {
+            try
+            {
+                string path = GetAssetCacheFilePath();
+                if (!File.Exists(path)) return;
+                string json = File.ReadAllText(path, Encoding.UTF8);
+                var wrapper = Newtonsoft.Json.JsonConvert.DeserializeObject<AssetCacheWrapper>(json);
+                if (wrapper == null) return;
+                // Invalidate if schema version changed or language changed
+                if (wrapper.Version != 2)
+                    return;
+                if (!string.Equals(wrapper.Language, EveManager.CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+                    return;
+                AssetsBySystem = wrapper.AssetsBySystem ?? new Dictionary<long, List<AssetEntry>>();
+            }
+            catch { }
         }
     }
 }

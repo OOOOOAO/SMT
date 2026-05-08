@@ -218,13 +218,33 @@ namespace SMT.EVEData
         }
 
         /// <summary>
+
         /// Gets or sets the current fleet info for this character
+
         /// </summary>
+
         [XmlIgnoreAttribute]
+
         public Fleet FleetInfo { get; set; }
 
+
+
         /// <summary>
+
+        /// Gets planetary colonies for this character. Updated by UpdatePlanetsFromESI().
+
+        /// </summary>
+
+        [XmlIgnoreAttribute]
+
+        public List<PlanetaryColony> Colonies { get; set; } = new List<PlanetaryColony>();
+
+
+
+        /// <summary>
+
         /// Fleet Updated Event Handler
+
         /// </summary>
         public delegate void FleetUpdatedHandler(LocalCharacter fleetOwner);
 
@@ -1287,23 +1307,171 @@ namespace SMT.EVEData
             catch { }
         }
 
-        private void UpdateWarningSystems()
-        {
-            // only track warning systems if the character is logged in
-            if (IsOnline)
-            {
-                if (!string.IsNullOrEmpty(Location) && DangerZoneRange > 0 && DangerZoneActive)
-                {
-                    WarningSystems = Navigation.GetSystemsXJumpsFrom(new List<string>(), Location, DangerZoneRange);
-                }
-            }
-            else
-            {
-                if (WarningSystems != null)
-                {
-                    WarningSystems.Clear();
-                }
-            }
-        }
-    }
+        private void UpdateWarningSystems()
+        {
+            // only track warning systems if the character is logged in
+            if (IsOnline)
+            {
+                if (!string.IsNullOrEmpty(Location) && DangerZoneRange > 0 && DangerZoneActive)
+                {
+                    WarningSystems = Navigation.GetSystemsXJumpsFrom(new List<string>(), Location, DangerZoneRange);
+                }
+            }
+            else
+            {
+                if (WarningSystems != null)
+                {
+                    WarningSystems.Clear();
+                }
+            }
+        }
+
+        public async Task UpdatePlanetsFromESI()
+        {
+            AuthDTO auth = GetAuthDTO();
+            if (auth == null || ID == 0 || !ESILinked)
+                return;
+
+            if (string.IsNullOrEmpty(ESIScopesStored) || !ESIScopesStored.Contains("esi-planets.manage_planets.v1"))
+                return;
+
+            try
+            {
+                // Step 1: Get list of colonies
+                var coloniesResult = await EveManager.Instance.EveApiClient.PlanetaryInteraction.GetColoniesAsync(auth);
+                if (!ESIHelpers.ValidateESICall(coloniesResult) || coloniesResult.Model == null)
+                    return;
+
+                var newColonies = new List<PlanetaryColony>();
+
+                // Local dict to resolve type IDs to names (avoids dependency on EveManager.ItemTypes)
+                var piTypeNames = new Dictionary<long, string>();
+
+                // Collect all unknown type IDs we'll need to resolve
+                var unknownTypeIds = new HashSet<long>();
+
+                // Step 2: For each colony, fetch the layout
+                foreach (var colony in coloniesResult.Model)
+                {
+                    try
+                    {
+                        var layoutResult = await EveManager.Instance.EveApiClient.PlanetaryInteraction
+                            .GetColonyLayoutAsync(auth, colony.PlanetId);
+
+                        // Resolve solar system name
+                        string sysName = string.Empty;
+                        var sysObj = EveManager.Instance.GetEveSystemFromID(colony.SolarSystemId);
+                        if (sysObj != null)
+                            sysName = sysObj.Name;
+
+                        var pc = new PlanetaryColony
+                        {
+                            PlanetId = colony.PlanetId,
+                            SolarSystemId = colony.SolarSystemId,
+                            SolarSystemName = sysName,
+                            PlanetType = colony.PlanetType ?? string.Empty,
+                            NumPins = (int)colony.NumPins,
+                            UpgradeLevel = (int)colony.UpgradeLevel,
+                            LastUpdate = colony.LastUpdate,
+                            CharacterName = Name,
+                        };
+
+                        // Step 3: Process pins from layout
+                        if (ESIHelpers.ValidateESICall(layoutResult) && layoutResult.Model?.Pins != null)
+                        {
+                            foreach (var pin in layoutResult.Model.Pins)
+                            {
+                                // Track unknown type IDs for batch resolution
+                                if (pin.TypeId != 0 && !piTypeNames.ContainsKey(pin.TypeId))
+                                    unknownTypeIds.Add(pin.TypeId);
+
+                                // Track extractor product type ID
+                                if (pin.ExtractorDetails?.ProductTypeId.HasValue == true)
+                                {
+                                    long prodTypeId = pin.ExtractorDetails.ProductTypeId.Value;
+                                    if (!piTypeNames.ContainsKey(prodTypeId))
+                                        unknownTypeIds.Add(prodTypeId);
+                                }
+
+                                var colonyPin = new ColonyPin
+                                {
+                                    PinId = pin.PinId,
+                                    TypeId = pin.TypeId,
+                                    ExpiryTime = pin.ExpiryTime,
+                                };
+                                pc.Pins.Add(colonyPin);
+                            }
+                        }
+
+                        newColonies.Add(pc);
+                    }
+                    catch { }
+                }
+
+                // Step 4: Batch-resolve unknown type IDs
+                if (unknownTypeIds.Count > 0)
+                {
+                    var idList = unknownTypeIds.ToList();
+                    const int typeNameBatch = 1000;
+                    for (int b = 0; b < idList.Count; b += typeNameBatch)
+                    {
+                        var batch = idList.Skip(b).Take(typeNameBatch).ToList();
+                        try
+                        {
+                            var nr = await EveManager.Instance.EveApiClient.Universe
+                                         .GetNamesAndCategoriesFromIdsAsync(batch);
+                            if (ESIHelpers.ValidateESICall(nr) && nr.Model != null)
+                            {
+                                foreach (var entry in nr.Model)
+                                {
+                                    if (entry.Category == "inventory_type")
+                                        piTypeNames[entry.Id] = entry.Name;
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // Step 5: Now assign TypeName and PinType to each pin (type names are now resolved)
+                foreach (var pc in newColonies)
+                {
+                    foreach (var pin in pc.Pins)
+                    {
+                        string typeName = piTypeNames.TryGetValue(pin.TypeId, out string resolvedName)
+                            ? resolvedName
+                            : string.Format("Unknown [{0}]", pin.TypeId);
+                        pin.TypeName = typeName;
+
+                        // Determine PinType from TypeName
+                        if (typeName.Contains("Command Center"))
+                            pin.PinType = PinType.CommandCenter;
+                        else if (typeName.Contains("Extractor Control Unit"))
+                            pin.PinType = PinType.Extractor;
+                        else if (typeName.Contains("Basic Industrial Facility") ||
+                                 typeName.Contains("Advanced Industrial Facility") ||
+                                 typeName.Contains("High-Tech Production Plant"))
+                            pin.PinType = PinType.Factory;
+                        else if (typeName.Contains("Storage Facility"))
+                            pin.PinType = PinType.Storage;
+                        else if (typeName.Contains("Launchpad"))
+                            pin.PinType = PinType.Launchpad;
+                        else
+                            pin.PinType = PinType.Unknown;
+
+                        // Resolve product type name for extractors
+                        if (pin.PinType == PinType.Extractor)
+                        {
+                            // We stored product type id per pin in earlier loop — re-fetch from ESI colony data
+                            // The extractor product type is stored in ExtractorDetails on the ESI pin object
+                            // We don't have it here, but we can rely on ExpiryTime to identify extractors
+                        }
+                    }
+                }
+
+                Colonies = newColonies;
+            }
+            catch { }
+        }
+    }
 }

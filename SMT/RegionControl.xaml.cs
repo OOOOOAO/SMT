@@ -849,7 +849,11 @@ namespace SMT
 
             AddCharactersToMap();
             AddDataToMap();
+
             AddSystemIntelOverlay();
+
+            AddPICirclesToMap();
+
             AddHighlightToSystem(SelectedSystem);
 
             if(MapConf.DrawRoute)
@@ -2128,8 +2132,60 @@ namespace SMT
             }
         }
 
-        private void AddSystemIntelOverlay()
-        {
+        /// <summary>
+        /// Draws orange outline circles around systems where the active character has planetary colonies.
+        /// Color is red/orange if any colony is expired or expiring soon.
+        /// </summary>
+        private void AddPICirclesToMap()
+        {
+            if (ActiveCharacter == null || ActiveCharacter.Colonies == null || ActiveCharacter.Colonies.Count == 0)
+                return;
+
+            const double piCircleSize = 42;
+            const double piCircleOffset = piCircleSize / 2;
+
+            foreach (MapSystem ms in Region.MapSystems.Values.ToList())
+            {
+                if (ms.ActualSystem == null)
+                    continue;
+
+                long sysId = ms.ActualSystem.ID;
+
+                var coloniesInSys = ActiveCharacter.Colonies
+                    .Where(c => c.SolarSystemId == sysId)
+                    .ToList();
+
+                if (coloniesInSys.Count == 0)
+                    continue;
+
+                bool hasUrgent = coloniesInSys.Any(c =>
+                    c.ExpiryStatus == "expired" || c.ExpiryStatus == "warning");
+
+                Color circleColor = hasUrgent
+                    ? Color.FromRgb(0xFF, 0x44, 0x44)   // red for expired/warning
+                    : Color.FromRgb(0xE8, 0x92, 0x2A);  // orange for normal
+
+                Shape piCircle = new System.Windows.Shapes.Ellipse()
+                {
+                    Height = piCircleSize,
+                    Width = piCircleSize,
+                    Stroke = new SolidColorBrush(circleColor),
+                    StrokeThickness = 2,
+                    Fill = Brushes.Transparent,
+                    IsHitTestVisible = false,
+                };
+
+                Canvas.SetLeft(piCircle, ms.Layout.X - piCircleOffset);
+                Canvas.SetTop(piCircle, ms.Layout.Y - piCircleOffset);
+                Canvas.SetZIndex(piCircle, ZINDEX_CHARACTERS - 3);
+
+                MainCanvas.Children.Add(piCircle);
+                DynamicMapElements.Add(piCircle);
+            }
+        }
+
+        private void AddSystemIntelOverlay()
+        {
             Brush intelBlobBrush = new SolidColorBrush(MapConf.ActiveColourScheme.IntelOverlayColour);
             Brush intelClearBlobBrush = new SolidColorBrush(MapConf.ActiveColourScheme.IntelClearOverlayColour);
 

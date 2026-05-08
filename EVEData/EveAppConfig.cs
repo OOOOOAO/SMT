@@ -11,12 +11,12 @@ namespace SMT.EVEData
         /// <summary>
         /// Callback URL for eve
         /// </summary>
-        public const string CallbackURL = @"http://localhost:8762/callback/";
+        public const string CallbackURL = @"http://localhost:8080/eapi/smt-extension";
 
         /// <summary>
         /// Client ID from the EVE Developer setup
         /// </summary>
-        public const string ClientID = "ID Goes here.. ";
+        public const string ClientID = "C ID";
 
         /// <summary>
         /// SMT Version Tagline

@@ -2887,6 +2887,13 @@ namespace SMT
         public System.Windows.Visibility CharTagVisibility =>
             _showChar ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
         public long SolarSystemId => _colony.SolarSystemId;
+        public string ExtractedResources => _colony.ExtractedResources;
+        public string StorageFillText => _colony.StorageFillText;
+        public string StorageFillColor => _colony.StorageFillColor;
+        public System.Windows.Visibility ExtractedVisibility =>
+            string.IsNullOrEmpty(_colony.ExtractedResources) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+        public System.Windows.Visibility StorageFillVisibility =>
+            string.IsNullOrEmpty(_colony.StorageFillText) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
     }
 
     /// <summary>

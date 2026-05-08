@@ -136,5 +136,44 @@ namespace SMT.EVEData
         }
 
         public string StorageColor => HasStorageAlert ? "#FF4444" : "#888888";
+
+        // What the extractors are harvesting (distinct product names)
+        public string ExtractedResources
+        {
+            get
+            {
+                var products = Pins
+                    .Where(p => p.PinType == PinType.Extractor && !string.IsNullOrEmpty(p.ProductTypeName))
+                    .Select(p => p.ProductTypeName)
+                    .Distinct()
+                    .ToList();
+                return products.Any() ? string.Join(", ", products) : string.Empty;
+            }
+        }
+
+        public string StorageFillText
+        {
+            get
+            {
+                var storagePins = Pins.Where(p => p.CapacityM3 > 0).ToList();
+                if (!storagePins.Any()) return string.Empty;
+                var maxFill = storagePins.Max(p => p.FillRatio);
+                var warning = storagePins.Any(p => p.IsOverflowing) ? "⚠ " : "";
+                return $"{warning}Storage: {(maxFill * 100):F0}%";
+            }
+        }
+
+        public string StorageFillColor
+        {
+            get
+            {
+                var storagePins = Pins.Where(p => p.CapacityM3 > 0).ToList();
+                if (!storagePins.Any()) return "#555555";
+                var maxFill = storagePins.Max(p => p.FillRatio);
+                if (maxFill >= 0.90) return "#FF4444";
+                if (maxFill >= 0.70) return "#FFAA00";
+                return "#55AA55";
+            }
+        }
     }
 }

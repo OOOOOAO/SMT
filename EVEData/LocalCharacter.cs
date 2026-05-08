@@ -1349,6 +1349,7 @@ namespace SMT.EVEData
 
                 // Collect all unknown type IDs we'll need to resolve
                 var unknownTypeIds = new HashSet<long>();
+                var extractorProductTypeIds = new Dictionary<long, long>(); // pinId -> productTypeId
 
                 // Step 2: For each colony, fetch the layout
                 foreach (var colony in coloniesResult.Model)
@@ -1389,6 +1390,7 @@ namespace SMT.EVEData
                                 if (pin.ExtractorDetails?.ProductTypeId.HasValue == true)
                                 {
                                     long prodTypeId = pin.ExtractorDetails.ProductTypeId.Value;
+                                    extractorProductTypeIds[pin.PinId] = prodTypeId;
                                     if (!piTypeNames.ContainsKey(prodTypeId))
                                         unknownTypeIds.Add(prodTypeId);
                                 }
@@ -1399,6 +1401,12 @@ namespace SMT.EVEData
                                     TypeId = pin.TypeId,
                                     ExpiryTime = pin.ExpiryTime,
                                 };
+                                if (pin.Contents != null)
+                                {
+                                    foreach (var c in pin.Contents)
+                                        colonyPin.Contents.Add(new PinContent { TypeId = c.TypeId, Amount = c.Amount });
+                                    colonyPin.UsedM3 = colonyPin.Contents.Sum(c => c.Amount * GetPIItemVolume(c.TypeId));
+                                }
                                 pc.Pins.Add(colonyPin);
                             }
                         }
@@ -1460,18 +1468,37 @@ namespace SMT.EVEData
                             pin.PinType = PinType.Unknown;
 
                         // Resolve product type name for extractors
-                        if (pin.PinType == PinType.Extractor)
+                        if (pin.PinType == PinType.Extractor && extractorProductTypeIds.TryGetValue(pin.PinId, out long ptId))
                         {
-                            // We stored product type id per pin in earlier loop — re-fetch from ESI colony data
-                            // The extractor product type is stored in ExtractorDetails on the ESI pin object
-                            // We don't have it here, but we can rely on ExpiryTime to identify extractors
+                            pin.ProductTypeName = piTypeNames.TryGetValue(ptId, out var ptn) ? ptn : $"Unknown [{ptId}]";
                         }
                     }
                 }
 
+                // Step 6: Set storage capacities
+                foreach (var pc in newColonies)
+                {
+                    foreach (var pin in pc.Pins)
+                    {
+                        pin.CapacityM3 = pin.PinType switch
+                        {
+                            PinType.Storage => 12000.0,
+                            PinType.Launchpad => 10000.0,
+                            PinType.CommandCenter => 500.0,
+                            _ => 0.0
+                        };
+                    }
+}
+
                 Colonies = newColonies;
             }
             catch { }
+        }
+
+        private static double GetPIItemVolume(long typeId)
+        {
+            // Most PI products are P1 (0.38 m3) — conservative fallback
+            return 0.38;
         }
     }
 }

@@ -680,6 +680,8 @@
                                                             <RowDefinition Height="Auto"/>
                                                             <RowDefinition Height="Auto"/>
                                                             <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
                                                         </Grid.RowDefinitions>
                                                         <!-- Row 0: Planet icon + system name + upgrade level -->
                                                         <Grid Grid.Row="0">
@@ -706,8 +708,18 @@
                                                                        Foreground="#778899" FontSize="10"
                                                                        Visibility="{Binding CharTagVisibility}"/>
                                                         </Grid>
-                                                        <!-- Row 2: Expiry status -->
+                                                        <!-- Row 2: Extracted resources -->
                                                         <TextBlock Grid.Row="2" Margin="18,1,0,0"
+                                                                   Text="{Binding ExtractedResources}"
+                                                                   Foreground="#88CC88" FontSize="10"
+                                                                   Visibility="{Binding ExtractedVisibility}"/>
+                                                        <!-- Row 3: Storage fill -->
+                                                        <TextBlock Grid.Row="3" Margin="18,1,0,0"
+                                                                   Text="{Binding StorageFillText}"
+                                                                   Foreground="{Binding StorageFillColor}" FontSize="10"
+                                                                   Visibility="{Binding StorageFillVisibility}"/>
+                                                        <!-- Row 4: Expiry status -->
+                                                        <TextBlock Grid.Row="4" Margin="18,1,0,0"
                                                                    Text="{Binding ExpiryText}"
                                                                    Foreground="{Binding ExpiryColor}" FontSize="10"/>
                                                     </Grid>

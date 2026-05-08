@@ -61,7 +61,7 @@ namespace SMT
 
         private System.Windows.Forms.NotifyIcon nIcon = new System.Windows.Forms.NotifyIcon();
 
-        private readonly string WindowLayoutVersion = "03";
+        private readonly string WindowLayoutVersion = EveAppConfig.SMT_VERSION;
 
         private IWavePlayer waveOutEvent;
 
@@ -2854,44 +2854,44 @@ namespace SMT
 
     }
 
-    /// <summary>
-    /// View-model wrapper for a single PlanetaryColony row in the Planets panel.
-    /// </summary>
-    public class PlanetRowViewModel
-    {
-        private readonly EVEData.PlanetaryColony _colony;
-        private readonly bool _showChar;
-
-        public PlanetRowViewModel(EVEData.PlanetaryColony colony, bool showChar)
-        {
-            _colony = colony;
-            _showChar = showChar;
-        }
-
-        public string SolarSystemName => _colony.SolarSystemName;
-        public string PlanetIcon => _colony.PlanetIcon;
-        public string PlanetType => _colony.PlanetType;
-        public string CharacterName => $"[{_colony.CharacterName}]";
-        public int UpgradeLevel => _colony.UpgradeLevel;
-        public string UpgradeLevelText => $"Lv{_colony.UpgradeLevel} · {_colony.NumPins} pins";
-        public string PlanetTypeAndPins
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(_colony.PlanetType)) return "Unknown";
-                return char.ToUpper(_colony.PlanetType[0]) + _colony.PlanetType.Substring(1).ToLower();
-            }
-        }
-        public string ExpiryText => _colony.ExpiryText;
-        public string ExpiryColor => _colony.ExpiryColor;
-        public System.Windows.Visibility CharTagVisibility =>
-            _showChar ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        public long SolarSystemId => _colony.SolarSystemId;
-    }
-
-    /// <summary>
-    /// TimeSpanConverter Sec statuc colour converter
-    /// </summary>
+    /// <summary>
+    /// View-model wrapper for a single PlanetaryColony row in the Planets panel.
+    /// </summary>
+    public class PlanetRowViewModel
+    {
+        private readonly EVEData.PlanetaryColony _colony;
+        private readonly bool _showChar;
+
+        public PlanetRowViewModel(EVEData.PlanetaryColony colony, bool showChar)
+        {
+            _colony = colony;
+            _showChar = showChar;
+        }
+
+        public string SolarSystemName => _colony.SolarSystemName;
+        public string PlanetIcon => _colony.PlanetIcon;
+        public string PlanetType => _colony.PlanetType;
+        public string CharacterName => $"[{_colony.CharacterName}]";
+        public int UpgradeLevel => _colony.UpgradeLevel;
+        public string UpgradeLevelText => $"Lv{_colony.UpgradeLevel} · {_colony.NumPins} pins";
+        public string PlanetTypeAndPins
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_colony.PlanetType)) return "Unknown";
+                return char.ToUpper(_colony.PlanetType[0]) + _colony.PlanetType.Substring(1).ToLower();
+            }
+        }
+        public string ExpiryText => _colony.ExpiryText;
+        public string ExpiryColor => _colony.ExpiryColor;
+        public System.Windows.Visibility CharTagVisibility =>
+            _showChar ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        public long SolarSystemId => _colony.SolarSystemId;
+    }
+
+    /// <summary>
+    /// TimeSpanConverter Sec statuc colour converter
+    /// </summary>
     public class TimeSpanConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

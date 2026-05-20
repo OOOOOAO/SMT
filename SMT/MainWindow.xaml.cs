@@ -2627,48 +2627,49 @@ namespace SMT
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             EVEData.ZKillRedisQ.ZKBDataSimple zs = value as EVEData.ZKillRedisQ.ZKBDataSimple;
-            Color rowCol = (Color)ColorConverter.ConvertFromString("#FF333333");
-            if(zs != null)
-            {
-                float Standing = 0.0f;
-
-                EVEData.LocalCharacter c = MainWindow.AppWindow.RegionUC.ActiveCharacter;
-                if(c != null && c.ESILinked)
-                {
-                    if(c.AllianceID != 0 && c.AllianceID == zs.VictimAllianceID)
-                    {
-                        Standing = 10.0f;
-                    }
-
-                    if(c.Standings.Keys.Contains(zs.VictimAllianceID))
-                    {
-                        Standing = c.Standings[zs.VictimAllianceID];
-                    }
-
-                    if(Standing == -10.0)
-                    {
-                        rowCol = Colors.Red;
-                    }
-
-                    if(Standing == -5.0)
-                    {
-                        rowCol = Colors.Orange;
-                    }
-
-                    if(Standing == 5.0)
-                    {
-                        rowCol = Colors.LightBlue;
-                    }
-
-                    if(Standing == 10.0)
-                    {
-                        rowCol = Colors.Blue;
-                    }
-                }
-
-                // Do the conversion from bool to visibility
-            }
-
+            // default: transparent row, let column colours do the work
+            Color rowCol = Color.FromArgb(0, 0, 0, 0);
+            if(zs != null)
+            {
+                float Standing = 0.0f;
+
+                EVEData.LocalCharacter c = MainWindow.AppWindow.RegionUC.ActiveCharacter;
+                if(c != null && c.ESILinked)
+                {
+                    if(c.AllianceID != 0 && c.AllianceID == zs.VictimAllianceID)
+                    {
+                        Standing = 10.0f;
+                    }
+
+                    if(c.Standings.Keys.Contains(zs.VictimAllianceID))
+                    {
+                        Standing = c.Standings[zs.VictimAllianceID];
+                    }
+
+                    // hostile: red tint bg
+                    if(Standing == -10.0)
+                    {
+                        rowCol = Color.FromArgb(60, 248, 81, 73);   // DangerColor tint
+                    }
+
+                    if(Standing == -5.0)
+                    {
+                        rowCol = Color.FromArgb(40, 240, 136, 62);  // WarningColor tint
+                    }
+
+                    // friendly: blue tint bg
+                    if(Standing == 5.0)
+                    {
+                        rowCol = Color.FromArgb(40, 31, 111, 235);  // AccentPrimary tint
+                    }
+
+                    if(Standing == 10.0)
+                    {
+                        rowCol = Color.FromArgb(60, 31, 111, 235);  // AccentPrimary stronger
+                    }
+                }
+            }
+
             return new SolidColorBrush(rowCol);
         }
 

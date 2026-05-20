@@ -34,9 +34,9 @@
                           CanUserAddRows="False"
                           SelectionMode="Single"
                           Margin="0,0,0,10"
-                          Background="#2A2A2A"
-                          Foreground="White"
-                          AlternatingRowBackground="#333333"
+                          Background="{StaticResource DarkBackgroundBrush}"
+                          Foreground="{StaticResource ForegroundBrush}"
+                          AlternatingRowBackground="{StaticResource WindowBackgroundBrush}"
                           GridLinesVisibility="Horizontal"
                           HeadersVisibility="Column">
                     <DataGrid.Columns>
@@ -89,7 +89,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Label Grid.Row="0" Grid.Column="0" Content="{DynamicResource Infra_LblSlot}" Margin="5" VerticalAlignment="Center" Foreground="White"/>
+                <Label Grid.Row="0" Grid.Column="0" Content="{DynamicResource Infra_LblSlot}" Margin="5" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
                 <ComboBox x:Name="SlotComboBox" Grid.Row="0" Grid.Column="1" Margin="5" VerticalAlignment="Center">
                     <ComboBoxItem Content="1"/>
                     <ComboBoxItem Content="2"/>
@@ -123,7 +123,7 @@
                     <ComboBoxItem Content="Clone Vat Bay"/>
                 </ComboBox>
 
-                <Label Grid.Row="1" Grid.Column="0" Content="{DynamicResource Infra_LblLevel}" Margin="5" VerticalAlignment="Center" Foreground="White"/>
+                <Label Grid.Row="1" Grid.Column="0" Content="{DynamicResource Infra_LblLevel}" Margin="5" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
                 <ComboBox x:Name="LevelComboBox" Grid.Row="1" Grid.Column="1" Margin="5" Text="0" VerticalAlignment="Center">
                     <ComboBoxItem Content="0"/>
                     <ComboBoxItem Content="1"/>
@@ -131,7 +131,7 @@
                     <ComboBoxItem Content="3"/>
                 </ComboBox>
 
-                <CheckBox x:Name="OnlineCheckBox" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="{DynamicResource Infra_ChkOnline}" Margin="15,5,5,5" IsChecked="True" VerticalAlignment="Center" Foreground="White"/>
+                <CheckBox x:Name="OnlineCheckBox" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="{DynamicResource Infra_ChkOnline}" Margin="15,5,5,5" IsChecked="True" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
 
                 <Button x:Name="AddUpdateButton" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" Content="{DynamicResource Infra_BtnAdd}" Width="150" Margin="5" HorizontalAlignment="Left" Click="AddUpdateButton_Click"/>
             </Grid>

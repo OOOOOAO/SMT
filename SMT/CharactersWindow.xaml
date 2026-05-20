@@ -63,7 +63,7 @@
 
             <Image Source="{Binding PortraitLocation}" Width="120" Height="120" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Margin="10" />
             <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" Margin="-40,30" Grid.RowSpan="2">
-                <TextBlock Text="{Binding Name}" FontSize="24" Foreground="White" />
+                <TextBlock Text="{Binding Name}" FontSize="24" Foreground="{StaticResource ForegroundBrush}" />
 
                 <TextBlock FontSize="14" Foreground="LightGray">
                                     <Run Text="{Binding CorporationName, FallbackValue='????'}" />
@@ -136,7 +136,7 @@
                 <StackPanel Margin="4">
                     <CheckBox IsChecked="{Binding DangerZoneActive}" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Checked="dangerZoneEnabled_Checked" Content="{DynamicResource CharWin_DangerEn}" Margin="4" />
                     <StackPanel Orientation="Horizontal" Margin="4">
-                        <xctk:IntegerUpDown Value="{Binding DangerZoneRange}" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0" Width="45" Minimum="1" Maximum="6" Background="Transparent"  Foreground="White" ValueChanged="dangerzone_ValueChanged" />
+                        <xctk:IntegerUpDown Value="{Binding DangerZoneRange}" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0" Width="45" Minimum="1" Maximum="6" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" ValueChanged="dangerzone_ValueChanged" />
                         <Label Content="{DynamicResource CharWin_DangerSize}" Grid.Column="0" Grid.Row="5" HorizontalAlignment="Right" />
                     </StackPanel>
                 </StackPanel>

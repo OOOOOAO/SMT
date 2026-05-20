@@ -26,19 +26,23 @@ namespace SMT.EVEData
 
         public string Name { get; set; }
 
-        public int NumPlayers
-        {
-            get
-            {
-                return m_numPlayers;
-            }
-
-            set
-            {
-                m_numPlayers = value;
-                OnPropertyChanged("NumPlayers");
-            }
-        }
+        public int NumPlayers
+        {
+            get
+            {
+                return m_numPlayers;
+            }
+
+            set
+            {
+                m_numPlayers = value;
+                OnPropertyChanged("NumPlayers");
+                OnPropertyChanged("IsOnline");
+            }
+        }
+
+        /// <summary>True when TQ reports at least one player online (server is up).</summary>
+        public bool IsOnline => m_numPlayers > 0;
 
         public DateTime ServerTime
         {

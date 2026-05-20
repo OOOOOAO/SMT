@@ -31,8 +31,8 @@
                 <TextBlock Foreground="Cyan" Padding="0,0,5,0" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top">
                     <Run Text="[" /><Run Text="{Binding IntelChannel, FallbackValue=''}" /><Run Text="]" />
                 </TextBlock>
-                <TextBlock Text="{Binding IntelTime, FallbackValue=TIME, StringFormat=HH:mm}" Foreground="Yellow" Padding="0,0,5,0" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
-                <TextBlock Text="{Binding IntelString, FallbackValue=Intel Data}" Foreground="White" TextWrapping="WrapWithOverflow" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
+                <TextBlock Text="{Binding IntelTime, FallbackValue=TIME, StringFormat=HH:mm}" Foreground="{StaticResource WarningBrush}" Padding="0,0,5,0" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
+                <TextBlock Text="{Binding IntelString, FallbackValue=Intel Data}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="WrapWithOverflow" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
             </DockPanel>
         </DataTemplate>
 
@@ -41,8 +41,8 @@
                 <TextBlock Foreground="Cyan" Padding="0,0,5,0" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top">
                     <Run Text="[" /><Run Text="{Binding Character, FallbackValue=''}" /><Run Text="]" />
                 </TextBlock>
-                <TextBlock Text="{Binding Time, FallbackValue=TIME, StringFormat=HH:mm}" Foreground="Yellow" Padding="0,0,5,0" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
-                <TextBlock Text="{Binding Text, FallbackValue=GameLog Data}" Foreground="White" TextWrapping="WrapWithOverflow" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
+                <TextBlock Text="{Binding Time, FallbackValue=TIME, StringFormat=HH:mm}" Foreground="{StaticResource WarningBrush}" Padding="0,0,5,0" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
+                <TextBlock Text="{Binding Text, FallbackValue=GameLog Data}" Foreground="{StaticResource ForegroundBrush}" TextWrapping="WrapWithOverflow" TextBlock.FontSize="{Binding MapConf.IntelTextSize, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" VerticalAlignment="Top" />
             </DockPanel>
         </DataTemplate>
     </Window.Resources>
@@ -72,39 +72,207 @@
                 </MenuItem>
             </Menu>
 
-            <Label Content="{DynamicResource Main_ActiveChar}" Margin="30,0,0,0" Padding="7" />
-            <ComboBox x:Name="CurrentActiveCharacterCombo" Width="180"  IsReadOnly="True" SelectionChanged="CurrentActiveCharacterCombo_Selected"  Height="18" />
+            <Label Content="{DynamicResource Main_ActiveChar}" Margin="20,0,0,0" Padding="8,4" VerticalAlignment="Center" />
+
+            <ComboBox x:Name="CurrentActiveCharacterCombo" Width="200"  IsReadOnly="True" SelectionChanged="CurrentActiveCharacterCombo_Selected"  Height="24" VerticalAlignment="Center" />
         </StackPanel>
 
         <StatusBar x:Name="AppStatusBar" DockPanel.Dock="Bottom" Height="Auto">
-            <StatusBarItem>
-                <TextBlock Text="{DynamicResource Main_EveTime}" />
-            </StatusBarItem>
-            <StatusBarItem>
-                <TextBlock Text="{Binding ServerTime, StringFormat=HH:mm}" Foreground="White" />
+
+
+
+            <!-- ── Server online indicator dot ── -->
+
+            <StatusBarItem Margin="8,0,4,0">
+                <Ellipse x:Name="ServerOnlineDot" Width="8" Height="8">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="{StaticResource SubtleTextBrush}" />
+                            <Setter Property="ToolTip" Value="TQ Offline" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                    <Setter Property="Fill" Value="{StaticResource SafeBrush}" />
+                                    <Setter Property="ToolTip" Value="TQ Online" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
             </StatusBarItem>
 
-            <Separator />
-            <StatusBarItem>
-                <TextBlock Text="{DynamicResource Main_TQVersion}" />
-            </StatusBarItem>
-            <StatusBarItem>
-                <TextBlock Text="{Binding ServerVersion}" Foreground="White" />
+
+
+            <!-- ── TQ label ── -->
+
+            <StatusBarItem Margin="0,0,0,0">
+
+                <TextBlock Text="TQ" Foreground="{StaticResource SubtleTextBrush}"
+
+                           FontSize="{StaticResource FontSizeXS}"
+
+                           VerticalAlignment="Center" />
+
             </StatusBarItem>
 
+
+
+            <!-- ── Separator ── -->
+
             <Separator />
+
+
+
+            <!-- ── EVE Time ── -->
+
             <StatusBarItem>
-                <TextBlock Text="{Binding NumPlayers}" Foreground="White" />
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                    <TextBlock Text="{DynamicResource Main_EveTime}"
+
+                               Foreground="{StaticResource SubtleTextBrush}"
+
+                               Margin="0,0,4,0" />
+
+                    <TextBlock Text="{Binding ServerTime, StringFormat=HH:mm}"
+
+                               Foreground="{StaticResource AccentLightBrush}"
+
+                               FontWeight="SemiBold" />
+
+                </StackPanel>
+
             </StatusBarItem>
+
+
+
+            <!-- ── Separator ── -->
+
+            <Separator />
+
+
+
+            <!-- ── Version ── -->
+
             <StatusBarItem>
-                <TextBlock Text="{DynamicResource Main_Players}" />
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                    <TextBlock Text="v" Foreground="{StaticResource MutedTextBrush}"
+
+                               FontSize="{StaticResource FontSizeXS}"
+
+                               Margin="0,0,1,0" />
+
+                    <TextBlock Text="{Binding ServerVersion}"
+
+                               Foreground="{StaticResource SubtleTextBrush}"
+
+                               FontSize="{StaticResource FontSizeXS}" />
+
+                </StackPanel>
+
             </StatusBarItem>
+
+
+
+            <!-- ── Separator ── -->
+
+            <Separator />
+
+
+
+            <!-- ── Players badge ── -->
+
+            <StatusBarItem>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                    <Border Background="{StaticResource HotBrush}"
+
+                            CornerRadius="3" Padding="5,1,5,1" Margin="0,0,5,0">
+
+                        <TextBlock Text="{Binding NumPlayers, StringFormat=N0}"
+
+                                   Foreground="{StaticResource ForegroundBrush}"
+
+                                   FontSize="{StaticResource FontSizeXS}"
+
+                                   FontWeight="SemiBold" />
+
+                    </Border>
+
+                    <TextBlock Text="{DynamicResource Main_Players}"
+
+                               Foreground="{StaticResource SubtleTextBrush}" />
+
+                </StackPanel>
+
+            </StatusBarItem>
+
+
+
         </StatusBar>
 
         <xcad:DockingManager x:Name="dockManager">
+
             <xcad:DockingManager.Theme>
+
                 <xcadt:ExpressionDarkTheme />
+
             </xcad:DockingManager.Theme>
+
+
+
+            <!-- Override AvalonDock Expression Dark base colors → Space Dark palette -->
+
+            <xcad:DockingManager.Resources>
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor1" Color="#161b22" />  <!-- panel bg (was #444444) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor2" Color="#e6edf3" />  <!-- foreground text (was White) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor3" Color="#0d1117" />  <!-- deep bg / black (was Black) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor4" Color="#0d1117" />  <!-- dark bg (was #333333) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor5" Color="#161b22" />  <!-- mid bg (was #3D3D3D) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor8" Color="#21262d" />  <!-- light bg / tabs (was #595959) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor9" Color="#1c2128" />  <!-- hover (was #4A4A4A) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor10" Color="#21262d" /> <!-- selected (was #595959) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor11" Color="#1f6feb" /> <!-- highlight/active (was #BDBDBD) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor13" Color="#30363d" /> <!-- lighter surface (was #666666) -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_NavigatorWindowListBoxItemHoverFill" Color="#1c2128" />
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_NavigatorWindowListBoxItemSelectedFill" Color="#1f6feb" />
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_NavigatorWindowListBoxItemSelectedInactiveFill" Color="#30363d" />
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_NavigatorWindowListBoxItemSelectedHoverFill" Color="#1f6feb" />
+
+
+
+                <!-- Simplify chrome: thinner borders, subtler separators -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor6" Color="#21262d" />  <!-- border / separator -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor7" Color="#161b22" />  <!-- grip area bg -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor12" Color="#30363d" /> <!-- tab border -->
+
+                <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor14" Color="#0d1117" /> <!-- deep dock bg -->
+
+
+
+            </xcad:DockingManager.Resources>
+
+
 
             <xcadl:LayoutRoot>
                 <xcadl:LayoutRoot.RightSide>
@@ -178,22 +346,28 @@
                             </xcadl:LayoutAnchorable>
 
                             <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_Characters}" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="CharactersContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
-                                <ScrollViewer Background="{DynamicResource ButtonBackground}">
+                                <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
                                     <StackPanel>
                                         <DataGrid  x:Name="CharactersList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False" MouseDoubleClick="CharactersList_MouseDoubleClick" HeadersVisibility="Column" SelectionUnit="FullRow" GridLinesVisibility="None" IsSynchronizedWithCurrentItem="False" ItemsSource="{Binding Path=., Mode=OneWay, NotifyOnSourceUpdated=True, UpdateSourceTrigger=PropertyChanged}">
                                             <DataGrid.CellStyle>
                                                 <Style TargetType="{x:Type DataGridCell}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsOnline}" Value="False">
-                                                            <Setter Property="Background" Value="DarkGray" />
-                                                            <Setter Property="Foreground" Value="Black" />
+
+                                                            <Setter Property="Background" Value="{StaticResource HotBrush}" />
+
+                                                            <Setter Property="Foreground" Value="{StaticResource SubtleTextBrush}" />
+
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding IsOnline}" Value="True">
                                                             <Setter Property="Background" Value="{DynamicResource ButtonBackground}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding WarningState}" Value="Warning">
-                                                            <Setter Property="Background" Value="Yellow" />
-                                                            <Setter Property="Foreground" Value="Black" />
+
+                                                            <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+
+                                                            <Setter Property="Foreground" Value="#0d1117" />
+
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -217,7 +391,7 @@
 
                             <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_Route}" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="RouteContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
                                 <Grid x:Name="MainRouteGrid">
-                                    <ScrollViewer Background="{DynamicResource ButtonBackground}">
+                                    <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
                                         <StackPanel>
                                             <GroupBox Header="{DynamicResource Main_Rte_GrpNav}">
                                                 <StackPanel Margin="4">
@@ -262,16 +436,16 @@
                                                                         <Setter Property="Background" Value="Purple" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding ActualSystem.TrigInvasionStatus}" Value="TriglavianMinorVictory">
-                                                                        <Setter Property="Background" Value="yellow" />
-                                                                        <Setter Property="Foreground" Value="black" />
+                                                                        <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+                                                                        <Setter Property="Foreground" Value="#0d1117" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding ActualSystem.TrigInvasionStatus}" Value="EdencomMinorVictory">
-                                                                        <Setter Property="Background" Value="yellow" />
-                                                                        <Setter Property="Foreground" Value="black" />
+                                                                        <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+                                                                        <Setter Property="Foreground" Value="#0d1117" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding ActualSystem.TrigInvasionStatus}" Value="Fortress">
-                                                                        <Setter Property="Background" Value="yellow" />
-                                                                        <Setter Property="Foreground" Value="black" />
+                                                                        <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+                                                                        <Setter Property="Foreground" Value="#0d1117" />
                                                                     </DataTrigger>
                                                                     <MultiDataTrigger>
                                                                         <MultiDataTrigger.Conditions>
@@ -323,7 +497,7 @@
 
                             <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_JumpPlanner}" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="JumpRouteContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
                                 <Grid x:Name="MainJumpRouteGrid">
-                                    <ScrollViewer Background="{DynamicResource ButtonBackground}">
+                                    <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
                                         <StackPanel>
                                             <GroupBox Header="{DynamicResource Main_JP_GrpNav}">
                                                 <StackPanel Margin="4">
@@ -384,16 +558,16 @@
                                                             <Style TargetType="{x:Type DataGridCell}">
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding ActualSystem.TrigInvasionStatus}" Value="TriglavianMinorVictory">
-                                                                        <Setter Property="Background" Value="yellow" />
-                                                                        <Setter Property="Foreground" Value="black" />
+                                                                        <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+                                                                        <Setter Property="Foreground" Value="#0d1117" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding ActualSystem.TrigInvasionStatus}" Value="EdencomMinorVictory">
-                                                                        <Setter Property="Background" Value="yellow" />
-                                                                        <Setter Property="Foreground" Value="black" />
+                                                                        <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+                                                                        <Setter Property="Foreground" Value="#0d1117" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding ActualSystem.TrigInvasionStatus}" Value="Fortress">
-                                                                        <Setter Property="Background" Value="yellow" />
-                                                                        <Setter Property="Foreground" Value="black" />
+                                                                        <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+                                                                        <Setter Property="Foreground" Value="#0d1117" />
                                                                     </DataTrigger>
                                                                     <MultiDataTrigger>
                                                                         <MultiDataTrigger.Conditions>
@@ -454,7 +628,7 @@
                                     <TabItem Header="{DynamicResource Main_WH_TabThera}">
                                         <ScrollViewer>
                                             <StackPanel>
-                                                <DataGrid  x:Name="TheraConnectionsList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="TheraConnectionsList_MouseDoubleClick" HeadersVisibility="Column" Background="AliceBlue">
+                                                <DataGrid  x:Name="TheraConnectionsList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="TheraConnectionsList_MouseDoubleClick" HeadersVisibility="Column" Background="{StaticResource DarkBackgroundBrush}">
                                                     <DataGrid.CellStyle>
                                                         <Style TargetType="{x:Type DataGridCell}">
                                                             <Style.Triggers>
@@ -479,7 +653,7 @@
                                     <TabItem Header="{DynamicResource Main_WH_TabTurnur}">
                                         <ScrollViewer>
                                             <StackPanel>
-                                                <DataGrid  x:Name="TurnurConnectionsList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="TurnurConnectionsList_MouseDoubleClick" HeadersVisibility="Column" Background="AliceBlue">
+                                                <DataGrid  x:Name="TurnurConnectionsList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="TurnurConnectionsList_MouseDoubleClick" HeadersVisibility="Column" Background="{StaticResource DarkBackgroundBrush}">
                                                     <DataGrid.CellStyle>
                                                         <Style TargetType="{x:Type DataGridCell}">
                                                             <Style.Triggers>
@@ -507,7 +681,7 @@
                             <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_Storms}" CanClose="False" CanAutoHide="True" CanHide="false" ContentId="StormContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
                                 <ScrollViewer>
                                     <StackPanel>
-                                        <DataGrid  x:Name="MetaliminalStormList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="AliceBlue" MouseDoubleClick="MetaliminalStormList_MouseDoubleClick">
+                                        <DataGrid  x:Name="MetaliminalStormList" Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="{StaticResource DarkBackgroundBrush}" MouseDoubleClick="MetaliminalStormList_MouseDoubleClick">
                                             <DataGrid.Columns>
                                                 <DataGridTextColumn Header="{DynamicResource Main_Stm_ColSys}" Binding="{Binding System}" Width="*" />
                                                 <DataGridTextColumn Header="{DynamicResource Main_Stm_ColReg}" Binding="{Binding Region}" Width="*" />
@@ -540,7 +714,7 @@
                                                         <DataTemplate>
                                                             <Grid>
                                                                 <ProgressBar Value="{Binding Path=DefendersScore, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Minimum="0" Maximum="1"  Height="13" ToolTipService.ToolTip="{Binding State}" ToolTipService.InitialShowDelay="100" ToolTipService.BetweenShowDelay="100" />
-                                                                <TextBlock Text="{Binding Path=DefendersScore, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" IsHitTestVisible="False" />
+                                                                <TextBlock Text="{Binding Path=DefendersScore, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}" IsHitTestVisible="False" />
                                                             </Grid>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
@@ -561,35 +735,52 @@
                         <xcadl:LayoutAnchorablePane>
                             <xcadl:LayoutAnchorable x:Name="ZKBLayoutAnchorable" Title="{DynamicResource Main_Panel_ZKB}" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="ZKBContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
                                 <Grid>
-                                    <ScrollViewer Background="{DynamicResource ButtonBackground}">
+                                    <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
                                         <StackPanel CanVerticallyScroll="True" ScrollViewer.CanContentScroll="True">
                                             <CheckBox Content="{DynamicResource Main_ZKB_ChkRegOnly}" x:Name="ZKBFeedFilterViewChk" IsChecked="True" Checked="ZKBFeedFilterViewChk_Checked" Unchecked="ZKBFeedFilterViewChk_Checked" Margin="4" />
                                             <DataGrid x:Name="ZKBFeed" Grid.Row="1" AreRowDetailsFrozen="True" Cursor="Hand" AutoGenerateColumns="False" CanUserAddRows="False" MouseUp="ZKBContexMenu_ShowSystem_Click" MouseDoubleClick="ZKBFeed_MouseDoubleClick_1" HeadersVisibility="Column" SelectionUnit="FullRow" GridLinesVisibility="None"  MinHeight="200">
-                                                <DataGrid.Columns>
-                                                    <DataGridTextColumn Binding="{Binding SystemName}" Width="30*" IsReadOnly="True" CanUserReorder="False" CanUserSort="False">
-                                                        <DataGridTextColumn.Header>
-                                                            <TextBlock Text="{DynamicResource ZKB_Column_System}" />
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Binding="{Binding VictimAllianceName}" Width="40*" IsReadOnly="True" CanUserReorder="False" CanUserSort="False">
-                                                        <DataGridTextColumn.Header>
-                                                            <TextBlock Text="{DynamicResource ZKB_Column_Alliance}" />
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Binding="{Binding ShipType}" Width="30*" IsReadOnly="True" CanUserReorder="False" CanUserSort="False">
-                                                        <DataGridTextColumn.Header>
-                                                            <TextBlock Text="{DynamicResource ZKB_Column_ShipType}" />
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-                                                </DataGrid.Columns>
-                                                <DataGrid.RowStyle>
-                                                    <Style TargetType="{x:Type DataGridRow}">
-                                                        <Setter Property="Background" Value="{Binding Converter={StaticResource zkbBGConverter}}" />
-                                                        <Setter Property="Foreground" Value="{Binding Converter={StaticResource zkbBGFConverter}}" />
-                                                        <Setter Property="FontSize" Value="10" />
-                                                    </Style>
+                                                <DataGrid.Columns>
+                                                    <!-- System: accent blue #58a6ff -->
+                                                    <DataGridTemplateColumn Width="30*" IsReadOnly="True" CanUserReorder="False" CanUserSort="False">
+                                                        <DataGridTemplateColumn.Header>
+                                                            <TextBlock Text="{DynamicResource ZKB_Column_System}" />
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding SystemName}" Foreground="#58a6ff" Padding="4,0" TextTrimming="CharacterEllipsis" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <!-- Alliance: subtle grey #8b949e -->
+                                                    <DataGridTemplateColumn Width="40*" IsReadOnly="True" CanUserReorder="False" CanUserSort="False">
+                                                        <DataGridTemplateColumn.Header>
+                                                            <TextBlock Text="{DynamicResource ZKB_Column_Alliance}" />
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding VictimAllianceName}" Foreground="#8b949e" Padding="4,0" TextTrimming="CharacterEllipsis" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <!-- Ship: warning orange #f0883e -->
+                                                    <DataGridTemplateColumn Width="30*" IsReadOnly="True" CanUserReorder="False" CanUserSort="False">
+                                                        <DataGridTemplateColumn.Header>
+                                                            <TextBlock Text="{DynamicResource ZKB_Column_ShipType}" />
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding ShipType}" Foreground="#f0883e" Padding="4,0" TextTrimming="CharacterEllipsis" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                                <DataGrid.RowStyle>
+                                                    <Style TargetType="{x:Type DataGridRow}">
+                                                        <Setter Property="Background" Value="{Binding Converter={StaticResource zkbBGConverter}}" />
+                                                        <Setter Property="FontSize" Value="10" />
+                                                    </Style>
                                                 </DataGrid.RowStyle>
                                                 <DataGrid.ContextMenu>
                                                     <ContextMenu>
@@ -627,7 +818,7 @@
                             </xcadl:LayoutAnchorable>
 
                             <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_Fleet}" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="FleetContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
-                                <ScrollViewer Background="{DynamicResource ButtonBackground}">
+                                <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
                                     <DataGrid  x:Name="FleetMembersList"  Grid.Row="1" AreRowDetailsFrozen="True" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MouseDoubleClick="CharactersList_MouseDoubleClick" HeadersVisibility="Column" SelectionUnit="FullRow" GridLinesVisibility="None" IsSynchronizedWithCurrentItem="False">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="{DynamicResource Main_Flt_ColName}" Binding="{Binding Name}" CanUserReorder="False" Width="*" />

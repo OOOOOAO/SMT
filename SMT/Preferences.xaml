@@ -9,8 +9,15 @@
         Name="PrefsWindow"
         Title="{DynamicResource Prefs_Title}" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Loaded="Window_Loaded">
     <Window.Resources>
+
         <local:JoinStringConverter  x:Key="stringJoiner" />
+
         <local:NegateBooleanConverter x:Key="NegateBooleanConverter" />
+
+
+
+
+
     </Window.Resources>
 
     <Grid Background="{DynamicResource ButtonBorder}" HorizontalAlignment="Stretch" VerticalAlignment="Top">
@@ -408,10 +415,53 @@
                     <Grid Height="500" Width="600">
                         <ScrollViewer>
                             <StackPanel>
-                                <xctk:PropertyGrid x:Name="ColoursPropertyGrid" AutoGenerateProperties="True" ShowSearchBox="False" ShowSortOptions="False" Background="{StaticResource DarkBackgroundBrush}">
+                                <xctk:PropertyGrid x:Name="ColoursPropertyGrid" AutoGenerateProperties="True" ShowSearchBox="False" ShowSortOptions="False"
+
+                                                   Background="{StaticResource DarkBackgroundBrush}"
+
+                                                   Foreground="{StaticResource ForegroundBrush}"
+
+                                                   BorderBrush="{StaticResource ButtonBorder}">
+
+                                    <xctk:PropertyGrid.Resources>
+                                        <Style TargetType="{x:Type DataGridRow}">
+                                            <Setter Property="Background" Value="{StaticResource DarkBackgroundBrush}" />
+                                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ButtonNormalBackground}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ButtonNormalBackground}" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                        <Style TargetType="{x:Type DataGridCell}">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource ButtonBorder}" />
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ButtonNormalBackground}" />
+                                                    <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                        <Style TargetType="{x:Type DataGrid}">
+                                            <Setter Property="Background" Value="{StaticResource DarkBackgroundBrush}" />
+                                            <Setter Property="RowBackground" Value="{StaticResource DarkBackgroundBrush}" />
+                                            <Setter Property="AlternatingRowBackground" Value="{StaticResource WindowBackgroundBrush}" />
+                                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource ButtonBorder}" />
+                                            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource ButtonBorder}" />
+                                            <Setter Property="VerticalGridLinesBrush" Value="{StaticResource ButtonBorder}" />
+                                        </Style>
+                                    </xctk:PropertyGrid.Resources>
                                     <xctk:PropertyGrid.CategoryGroupHeaderTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding}" Foreground="{StaticResource ForegroundBrush}" />
+                                            <TextBlock Text="{Binding}" Foreground="{StaticResource ForegroundBrush}"
+                                                       Background="{StaticResource DarkBackgroundBrush}"
+                                                       Padding="4,2" FontWeight="SemiBold" />
                                         </DataTemplate>
                                     </xctk:PropertyGrid.CategoryGroupHeaderTemplate>
                                 </xctk:PropertyGrid>
@@ -421,7 +471,7 @@
                     </Grid>
                 </TabItem>
             </TabControl>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,2">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="Auto" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,2">
                 <Button Content="{DynamicResource Prefs_Btn_OpenFolder}" Margin="10,0" Width="145" Click="Prefs_OpenFolder_Click" />
                 <Button Content="{DynamicResource Prefs_Btn_Default}" Margin="3,0" Width="60" Click="Prefs_Default_Click" />
                 <Button Content="{DynamicResource Prefs_Btn_OK}" Margin="3,0" Width="55" Click="Prefs_OK_Click" />

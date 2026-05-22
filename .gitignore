@@ -361,3 +361,9 @@ FodyWeavers.xsd
 
 *.p7s
 .alma-snapshots
+
+# Local notes & IDE
+memory-bank/
+memory-bank.md
+.idea/
+nul

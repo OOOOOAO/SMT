@@ -30,25 +30,53 @@ namespace SMT
 
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(esiLogonURL) { UseShellExecute = true });
 
+#if DEBUG
+            string debugLogPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SMT", "logon_debug.log");
+            try { System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(debugLogPath)); } catch { }
+            Action<string> dlog = (msg) =>
+            {
+                try { System.IO.File.AppendAllText(debugLogPath, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n"); } catch { }
+            };
+#endif
+
             try
             {
-                listener.Prefixes.Add(EVEData.EveAppConfig.CallbackURL);
+                // HttpListener requires prefix to end with '/'
+                string prefix = EVEData.EveAppConfig.CallbackURL;
+                if (!prefix.EndsWith("/")) prefix += "/";
+#if DEBUG
+                dlog($"Adding prefix: {prefix}");
+#endif
+                listener.Prefixes.Add(prefix);
+#if DEBUG
+                dlog("Calling listener.Start()...");
+#endif
                 listener.Start();
+#if DEBUG
+                dlog($"listener.Start() OK. IsListening={listener.IsListening}");
+#endif
 
                 while (!serverDone)
                 {
                     Console.WriteLine("Listening...");
+#if DEBUG
+                    dlog("Waiting for incoming request (GetContext)...");
+#endif
 
                     // Note: The GetContext method blocks while waiting for a request.
                     HttpListenerContext context = listener.GetContext();
                     HttpListenerRequest request = context.Request;
+#if DEBUG
+                    dlog($"Got request: {request.HttpMethod} {request.Url}");
+#endif
 
                     EVEData.EveManager.Instance.HandleEveAuthSMTUri(request.Url, challengeCode);
 
                     // Obtain a response object.
                     HttpListenerResponse response = context.Response;
                     // Construct a response.
-                    //                    string responseString = $"<HTML><BODY>SMT Character Added.. close logon window when done or click <a href=\"{esiLogonURL}\"> here </a> to add another character</BODY></HTML>";
                     string responseString = $"<HTML><HEAD title=\"SMT Auth\"><meta http-equiv=\"refresh\" content=\"1;url={esiLogonURL}\"></HEAD><BODY>SMT Character Added..</HTML>";
 
                     byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
@@ -58,9 +86,36 @@ namespace SMT
                     output.Write(buffer, 0, buffer.Length);
                 }
             }
+#if DEBUG
+            catch (Exception ex)
+            {
+                string logPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SMT", "logon_error.log");
+                try
+                {
+                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath));
+                    System.IO.File.AppendAllText(logPath,
+                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] CallbackURL={EVEData.EveAppConfig.CallbackURL}\n" +
+                        $"Exception: {ex.GetType().FullName}: {ex.Message}\n" +
+                        $"StackTrace:\n{ex.StackTrace}\n\n");
+                }
+                catch { }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(
+                        $"ESI Logon HttpListener failed!\n\nCallback: {EVEData.EveAppConfig.CallbackURL}\n\n{ex.GetType().Name}: {ex.Message}\n\nLog: {logPath}",
+                        "SMT Logon Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            }
+#else
             catch
             {
             }
+#endif
         }
 
         private void Window_Closed(object sender, EventArgs e)

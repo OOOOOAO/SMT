@@ -676,6 +676,12 @@ namespace SMT.EVEData
         public SerializableDictionary<string, string> ShipTypes { get; set; }
 
         /// <summary>
+        /// DEMO: tracks per-enemy movement across systems based on intel chat.
+        /// Currently populated heuristically from IntelData (see IntelTrailTracker).
+        /// </summary>
+        public IntelTrailTracker IntelTrails { get; private set; } = new IntelTrailTracker();
+
+        /// <summary>
         /// Gets or sets the System ID to Name dictionary
         /// </summary>
         public SerializableDictionary<long, string> SystemIDToName { get; set; }
@@ -3494,6 +3500,15 @@ namespace SMT.EVEData
                                 }
 
                                 IntelDataList.Enqueue(id);
+
+                                // DEMO: feed enemy-movement tracker. Ship-type set is
+                                // used by the heuristic to reject ship tokens when
+                                // guessing the enemy name.
+                                try
+                                {
+                                    IntelTrails?.Ingest(id, ShipTypes?.Values);
+                                }
+                                catch { /* trail tracking is best-effort */ }
 
                                 if(IntelUpdatedEvent != null)
                                 {

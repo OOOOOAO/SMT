@@ -850,6 +850,7 @@ namespace SMT
             AddCharactersToMap();
             AddDataToMap();
             AddSystemIntelOverlay();
+            AddIntelTrailsOverlay();
             AddHighlightToSystem(SelectedSystem);
 
             if(MapConf.DrawRoute)
@@ -952,6 +953,17 @@ namespace SMT
                     SystemDropDownAC.SelectedItem = kvp.Value;
                     SelectedSystem = kvp.Value.Name;
                     AddHighlightToSystem(name);
+
+                    // Intel trail focus: clicking any system that lies on an active
+                    // enemy trail selects that trail (the most recently-sighted one
+                    // wins if multiple enemies have passed through). Clicking a
+                    // system that no trail visits clears the selection. The next
+                    // ReDrawMap will redraw the trail in its flowing/active style.
+                    if(EM != null && EM.IntelTrails != null)
+                    {
+                        var hits = EM.IntelTrails.EnemiesAtSystem(kvp.Value.Name);
+                        EM.IntelTrails.SelectedEnemyId = hits.Count > 0 ? hits[0] : null;
+                    }
 
                     break;
                 }
@@ -2231,9 +2243,9 @@ namespace SMT
 
                         int ringCount = ageFactor < 0.33 ? 3 : (ageFactor < 0.66 ? 2 : 1);
 
-                        double startSize = 72.0;
+                        double startSize = 54.0;
 
-                        double endSize   = 20.0;
+                        double endSize   = 13.0;
 
                         // Duration slows down as intel ages (fresh = fast pulse, old = slow)
 
@@ -2401,6 +2413,126 @@ namespace SMT
 
             }
 
+        }
+
+        /// <summary>
+        /// DEMO: Draw faint trails between systems where the same enemy id has
+        /// been reported by intel. Trails are connectionless polylines; each
+        /// segment fades out individually as it ages so the most recent moves
+        /// stand out and ancient sightings dissolve.
+        ///
+        /// Visual budget: max 1.5px stroke, peak opacity ~0.28. The trails sit
+        /// at ZIndex 13 — under the pulse rings (15) but above standard map
+        /// links so a hostile route is visible at a glance without stealing
+        /// attention from the active pulse.
+        /// </summary>
+        private void AddIntelTrailsOverlay()
+        {
+            if(EM == null || EM.IntelTrails == null) return;
+
+            var lifetime = EM.IntelTrails.TrailLifetime;
+            var now = DateTime.Now;
+            var trails = EM.IntelTrails.GetActiveTrails();
+            if(trails.Count == 0) return;
+
+            string selectedId = EM.IntelTrails.SelectedEnemyId;
+            // Cyan reads cleanly against the dark map and the red intel pulse rings
+            // — easy to tell "where the enemy has been" apart from "what is hot now".
+            Color intelColor = Colors.Cyan;
+
+            // ---- visual budget ----
+            const double idleStroke    = 1.5;     // unselected: very subtle dashed thread
+            const double activeStroke  = 2.8;     // selected: bold and present
+            const double idleAlphaMax  = 0.22;    // unselected: barely there
+            const double activeAlpha   = 0.92;    // selected: fully visible
+            const double secondsPerSeg = 0.6;     // flow speed (a dash period crosses one segment)
+
+            foreach(var trail in trails)
+            {
+                bool isSelected = selectedId != null &&
+                                  string.Equals(selectedId, trail.EnemyId, StringComparison.OrdinalIgnoreCase);
+
+                for(int i = 1; i < trail.Points.Count; i++)
+                {
+                    var prev = trail.Points[i - 1];
+                    var curr = trail.Points[i];
+
+                    if(!Region.IsSystemOnMap(prev.SystemName)) continue;
+                    if(!Region.IsSystemOnMap(curr.SystemName)) continue;
+
+                    EVEData.MapSystem a = Region.MapSystems[prev.SystemName];
+                    EVEData.MapSystem b = Region.MapSystems[curr.SystemName];
+
+                    double ageSec = (now - curr.Time).TotalSeconds;
+                    double ageFactor = Math.Max(0.0, Math.Min(1.0, ageSec / lifetime.TotalSeconds));
+
+                    double opacity = isSelected
+                        ? activeAlpha                                  // selected: ignore age, stay bright
+                        : idleAlphaMax * (1.0 - ageFactor);            // idle: fade with age
+                    if(opacity < 0.02) continue;
+
+                    Color segColor = intelColor;
+                    segColor.A = (byte)(opacity * 255);
+
+                    var line = new System.Windows.Shapes.Line
+                    {
+                        X1 = a.Layout.X,
+                        Y1 = a.Layout.Y,
+                        X2 = b.Layout.X,
+                        Y2 = b.Layout.Y,
+                        Stroke = new SolidColorBrush(segColor),
+                        StrokeThickness = isSelected ? activeStroke : idleStroke,
+                        StrokeStartLineCap = PenLineCap.Round,
+                        StrokeEndLineCap = PenLineCap.Round,
+                        IsHitTestVisible = false,
+                        StrokeDashCap = PenLineCap.Round,
+                        StrokeDashArray = new DoubleCollection { 4, 3 },
+                    };
+
+                    if(isSelected)
+                    {
+                        // Flow! Animate StrokeDashOffset from 0 to -(dashCycle) over the
+                        // time it takes to cross one full segment. WPF normalises offset
+                        // by stroke thickness, hence the * thickness.
+                        const double dashCycle = 4.0 + 3.0;
+                        double dashEndOffset = -dashCycle;
+                        var flowAnim = new System.Windows.Media.Animation.DoubleAnimation
+                        {
+                            From = 0,
+                            To = dashEndOffset,
+                            Duration = TimeSpan.FromSeconds(secondsPerSeg),
+                            RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever,
+                        };
+                        System.Windows.Media.Animation.Timeline.SetDesiredFrameRate(flowAnim, 30);
+                        line.BeginAnimation(System.Windows.Shapes.Shape.StrokeDashOffsetProperty, flowAnim);
+                    }
+
+                    Canvas.SetZIndex(line, 13);
+                    MainCanvas.Children.Add(line);
+                    DynamicMapElements.Add(line);
+
+                    // Endpoint dot at the most recent sighting (the head of the trail).
+                    if(i == trail.Points.Count - 1)
+                    {
+                        double dotSize = isSelected ? 8.0 : 5.0;
+                        Color dotColor = intelColor;
+                        double dotAlpha = isSelected ? activeAlpha : Math.Min(idleAlphaMax + 0.10, 0.4);
+                        dotColor.A = (byte)(dotAlpha * 255);
+                        var dot = new Ellipse
+                        {
+                            Width = dotSize,
+                            Height = dotSize,
+                            Fill = new SolidColorBrush(dotColor),
+                            IsHitTestVisible = false,
+                        };
+                        Canvas.SetLeft(dot, b.Layout.X - dotSize / 2.0);
+                        Canvas.SetTop(dot, b.Layout.Y - dotSize / 2.0);
+                        Canvas.SetZIndex(dot, 13);
+                        MainCanvas.Children.Add(dot);
+                        DynamicMapElements.Add(dot);
+                    }
+                }
+            }
         }
 
         /// <summary>

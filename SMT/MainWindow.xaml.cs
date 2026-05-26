@@ -217,7 +217,26 @@ namespace SMT
                 }
             };
             
-            EVEManager.EVELogFolder = MapConf.CustomEveLogFolderLocation;
+            // EVELogFolder should be the EVE log root (parent of Chatlogs/Gamelogs).
+            // SMT internally appends "Chatlogs" / "Gamelogs" itself (EveManager.SetupIntelWatcher
+            // and SetupGameLogWatcher both do Path.Combine(EVELogFolder, "Chatlogs"/"Gamelogs")).
+            // If the user pointed CustomEveLogFolderLocation directly at "...\Chatlogs", the
+            // FileSystemWatcher would end up watching "...\Chatlogs\Chatlogs" (non-existent)
+            // and the intel system would silently never fire. Strip a trailing Chatlogs/Gamelogs
+            // segment defensively so either flavour of user input works.
+            {
+                var raw = MapConf.CustomEveLogFolderLocation?.TrimEnd('\\', '/');
+                if (!string.IsNullOrEmpty(raw))
+                {
+                    var leaf = System.IO.Path.GetFileName(raw);
+                    if (string.Equals(leaf, "Chatlogs", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(leaf, "Gamelogs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        raw = System.IO.Path.GetDirectoryName(raw);
+                    }
+                }
+                EVEManager.EVELogFolder = raw;
+            }
 
             EVEManager.UseESIForCharacterPositions = MapConf.UseESIForCharacterPositions;
 

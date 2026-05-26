@@ -93,6 +93,11 @@
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Padding" Value="2,1" />
                     </Style>
+                    <!-- Force dropdown items to use the dark theme (AutoCompleteComboBox bypasses ItemContainerStyle for filtered items) -->
+                    <Style TargetType="{x:Type ComboBoxItem}" BasedOn="{StaticResource ComboBoxItemStyle}">
+                        <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+                        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                    </Style>
                 </dotNetKitControls:AutoCompleteComboBox.Resources>
             </dotNetKitControls:AutoCompleteComboBox>
 

@@ -10,6 +10,8 @@
         xmlns:xcad="clr-namespace:AvalonDock;assembly=AvalonDock"
         xmlns:xcadl="clr-namespace:AvalonDock.Layout;assembly=AvalonDock"
         xmlns:xcadt="clr-namespace:AvalonDock.Themes;assembly=AvalonDock.Themes.Expression"
+        xmlns:xcadc="clr-namespace:AvalonDock.Controls;assembly=AvalonDock"
+        xmlns:xcadconv="clr-namespace:AvalonDock.Converters;assembly=AvalonDock"
         x:Class="SMT.MainWindow"
         mc:Ignorable="d"
         Title="SMT" Height="850" Width="1124" Icon="smt_bomb_icon.ico" ResizeMode="CanResizeWithGrip" RenderOptions.ClearTypeHint="Enabled" TextOptions.TextFormattingMode="Ideal">
@@ -269,6 +271,55 @@
                 <SolidColorBrush x:Key="AvalonDock_Expression_BaseColor14" Color="#0d1117" /> <!-- deep dock bg -->
 
 
+                <!-- ═══ Auto-Hide Tab (LayoutAnchorControl) — readable text, hover accent, active indicator ═══ -->
+                <ControlTemplate x:Key="AvalonDock_Expression_AnchorTemplate"
+                                 TargetType="{x:Type xcadc:LayoutAnchorControl}">
+                    <Border x:Name="Bd"
+                            Margin="0,4,2,0"
+                            Padding="4,2"
+                            Background="#0d1117"
+                            BorderThickness="0,0,0,2"
+                            BorderBrush="Transparent"
+                            CornerRadius="3,3,0,0">
+                        <ContentPresenter
+                            Content="{Binding Model, RelativeSource={RelativeSource TemplatedParent}}"
+                            ContentTemplate="{Binding AnchorableHeaderTemplate, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type xcad:DockingManager}, Mode=FindAncestor}}"
+                            ContentTemplateSelector="{Binding AnchorableHeaderTemplateSelector, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type xcad:DockingManager}, Mode=FindAncestor}}"
+                            TextElement.Foreground="#e6edf3" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Side-dependent corner radius & margin adjustments -->
+                        <Trigger Property="Side" Value="Right">
+                            <Setter TargetName="Bd" Property="CornerRadius" Value="0,0,3,3" />
+                            <Setter TargetName="Bd" Property="Margin" Value="0,0,2,4" />
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="0,2,0,0" />
+                        </Trigger>
+                        <Trigger Property="Side" Value="Bottom">
+                            <Setter TargetName="Bd" Property="CornerRadius" Value="3,3,0,0" />
+                            <Setter TargetName="Bd" Property="Margin" Value="2,4,0,0" />
+                        </Trigger>
+                        <Trigger Property="Side" Value="Top">
+                            <Setter TargetName="Bd" Property="CornerRadius" Value="0,0,3,3" />
+                            <Setter TargetName="Bd" Property="Margin" Value="0,0,2,4" />
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="0,2,0,0" />
+                        </Trigger>
+                        <!-- Hover: AccentLink blue text + subtle bg -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="true" />
+                                <Condition Property="Selector.IsSelected" Value="false" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="#21262d" />
+                            <Setter TargetName="Bd" Property="TextElement.Foreground" Value="#58a6ff" />
+                        </MultiTrigger>
+                        <!-- Active / Selected: AccentPrimary bottom indicator -->
+                        <Trigger Property="Selector.IsSelected" Value="true">
+                            <Setter TargetName="Bd" Property="Background" Value="#21262d" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#1f6feb" />
+                            <Setter TargetName="Bd" Property="TextElement.Foreground" Value="#e6edf3" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
 
             </xcad:DockingManager.Resources>
 

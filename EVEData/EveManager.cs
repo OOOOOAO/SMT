@@ -390,9 +390,15 @@ namespace SMT.EVEData
         public SerializableDictionary<int, string> CharacterIDToName { get; set; }
 
         public EVEStandardAPI EveApiClient { get; set; }
-        public SSOv2 Sso { get; set; }
+        /// <summary>
+        /// ESI authentication service (SSO/PKCE flow). Replaces the old inline Sso/ESIScopes fields.
+        /// </summary>
+        public EsiAuthService EsiAuth { get; private set; }
 
-        public List<string> ESIScopes { get; set; }
+        /// <summary>
+        /// Convenience accessor — existing code that reads EveManager.Sso still compiles.
+        /// </summary>
+        public SSOv2 Sso => EsiAuth.Sso;
 
         /// <summary>
         /// Updates the ESI rate-limit bucket for the given group from response headers (X-Esi-Error-Limit-Remain, X-Esi-Error-Limit-Reset).
@@ -2027,31 +2033,11 @@ namespace SMT.EVEData
         }
 
         /// <summary>
-        /// Pending PKCE code_verifier for the next callback (same flow as old ESI.NET: one random string used to derive both challenge and verifier).
-        /// </summary>
-        private string _pendingPkceCodeVerifier;
-
-        /// <summary>
-        /// Get the ESI Logon URL String. Uses the same PKCE derivation as ESI.NET: code_verifier = base64url(UTF8(challengeCode)), code_challenge = base64url(SHA256(UTF8(code_verifier))).
-        /// The same challengeCode must be passed to HandleEveAuthSMTUri; we store code_verifier and use it when the callback arrives.
+        /// Get the ESI Logon URL String. Delegates to EsiAuthService.
         /// </summary>
         public string GetESILogonURL(string challengeCode)
         {
-            // Match ESI.NET: code_verifier = base64url(UTF8(challengeCode)), code_challenge = base64url(SHA256(UTF8(code_verifier)))
-            string codeVerifier = ToBase64UrlString(Encoding.UTF8.GetBytes(challengeCode));
-            byte[] hash;
-            using (var sha256 = SHA256.Create())
-            {
-                hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
-            }
-            string codeChallenge = ToBase64UrlString(hash);
-            _pendingPkceCodeVerifier = codeVerifier;
-            return Sso.AuthorizeToSSOPKCEUri(VersionStr, codeChallenge, ESIScopes);
-        }
-
-        private static string ToBase64UrlString(byte[] bytes)
-        {
-            return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            return EsiAuth.GetESILogonURL(challengeCode);
         }
 
         /// <summary>
@@ -2155,56 +2141,11 @@ namespace SMT.EVEData
         }
 
         /// <summary>
-        /// Hand the custom smtauth- url we get back from the logon screen
+        /// Handle the custom smtauth- callback URL. Delegates to EsiAuthService.
         /// </summary>
-        public async void HandleEveAuthSMTUri(Uri uri, string challengeCode)
+        public void HandleEveAuthSMTUri(Uri uri, string challengeCode)
         {
-            var query = HttpUtility.ParseQueryString(uri.Query);
-            if (query["code"] == null)
-                return;
-
-            string code = query["code"];
-            // Use the code_verifier we stored when GetESILogonURL was called (PKCE requires verifier at token exchange, not the raw challenge string)
-            string codeVerifier = _pendingPkceCodeVerifier ?? ToBase64UrlString(Encoding.UTF8.GetBytes(challengeCode));
-            _pendingPkceCodeVerifier = null;
-
-            AccessTokenDetails tokenDetails;
-            try
-            {
-                tokenDetails = await Sso.VerifyAuthorizationForPKCEAuthAsync(code, codeVerifier);
-                if (tokenDetails == null || tokenDetails.ExpiresIn <= 0)
-                    return;
-            }
-            catch
-            {
-                return;
-            }
-
-            CharacterDetails characterDetails;
-            try
-            {
-                characterDetails = await Sso.GetCharacterDetailsAsync(tokenDetails.AccessToken);
-                if (characterDetails == null)
-                    return;
-            }
-            catch
-            {
-                return;
-            }
-
-            LocalCharacter esiChar = FindCharacterByName(characterDetails.CharacterName);
-            if (esiChar == null)
-            {
-                esiChar = new LocalCharacter(characterDetails.CharacterName, string.Empty, string.Empty);
-                AddCharacter(esiChar);
-            }
-
-            esiChar.ESIRefreshToken = tokenDetails.RefreshToken;
-            esiChar.ESILinked = true;
-            esiChar.ESIAccessToken = tokenDetails.AccessToken;
-            esiChar.ESIAccessTokenExpiry = tokenDetails.ExpiresUtc.ToLocalTime();
-            esiChar.ID = characterDetails.CharacterId;
-            esiChar.ESIScopesStored = characterDetails.Scopes != null ? string.Join(" ", characterDetails.Scopes) : string.Empty;
+            EsiAuth.HandleEveAuthSMTUri(uri, challengeCode);
         }
 
         public void InitNavigation()
@@ -3088,70 +3029,10 @@ namespace SMT.EVEData
         {
             string userAgent = "SMT/" + EveAppConfig.SMT_VERSION + EveAppConfig.SMT_USERAGENT_DETAILS;
             EveApiClient = new EVEStandardAPI(userAgent, DataSource.Tranquility, CompatibilityDate.v2025_12_16, TimeSpan.FromSeconds(30));
-            Sso = new SSOv2(DataSource.Tranquility, EveAppConfig.CallbackURL, EveAppConfig.ClientID, null);
-
-            ESIScopes = new List<string>
+            EsiAuth = new EsiAuthService(VersionStr)
             {
-                "publicData",
-                "esi-location.read_location.v1",
-                "esi-location.read_ship_type.v1",
-                "esi-skills.read_skills.v1",
-                "esi-skills.read_skillqueue.v1",
-                "esi-wallet.read_character_wallet.v1",
-                "esi-wallet.read_corporation_wallet.v1",
-                "esi-search.search_structures.v1",
-                "esi-characters.read_contacts.v1",
-                "esi-universe.read_structures.v1",
-                "esi-corporations.read_corporation_membership.v1",
-                "esi-assets.read_assets.v1",
-                "esi-planets.manage_planets.v1",
-                "esi-fleets.read_fleet.v1", 
-                "esi-fleets.write_fleet.v1",
-                "esi-ui.open_window.v1",
-                "esi-ui.write_waypoint.v1", 
-                "esi-characters.write_contacts.v1",
-                "esi-markets.structure_markets.v1", 
-                "esi-corporations.read_structures.v1",
-                "esi-characters.read_loyalty.v1"
-                , "esi-characters.read_chat_channels.v1",
-                "esi-characters.read_medals.v1",
-                "esi-characters.read_standings.v1",
-                "esi-characters.read_agents_research.v1",
-                "esi-industry.read_character_jobs.v1",
-                "esi-markets.read_character_orders.v1",
-                "esi-characters.read_blueprints.v1",
-                "esi-characters.read_corporation_roles.v1",
-                "esi-location.read_online.v1", 
-                "esi-characters.read_fatigue.v1",
-                "esi-corporations.track_members.v1",
-                "esi-wallet.read_corporation_wallets.v1",
-                "esi-characters.read_notifications.v1",
-                "esi-corporations.read_divisions.v1",
-                "esi-corporations.read_contacts.v1", 
-                "esi-assets.read_corporation_assets.v1",
-                "esi-corporations.read_titles.v1",
-                "esi-corporations.read_blueprints.v1",
-                "esi-corporations.read_standings.v1",
-                "esi-corporations.read_starbases.v1",
-                "esi-industry.read_corporation_jobs.v1",
-                "esi-markets.read_corporation_orders.v1",
-                "esi-corporations.read_container_logs.v1",
-                "esi-industry.read_character_mining.v1",
-                "esi-industry.read_corporation_mining.v1",
-                "esi-planets.read_customs_offices.v1",
-                "esi-corporations.read_facilities.v1",
-                "esi-corporations.read_medals.v1",
-                "esi-characters.read_titles.v1",
-                "esi-alliances.read_contacts.v1",
-                "esi-characters.read_fw_stats.v1",
-                "esi-corporations.read_fw_stats.v1",
-                "esi-corporations.read_projects.v1",
-                "esi-corporations.read_freelance_jobs.v1",
-                "esi-characters.read_freelance_jobs.v1",
-                "esi-structures.read_corporation.v1", 
-                "esi-structures.read_character.v1",
-                "esi-activities.read_character.v1",
-                "esi-access.read_lists.v1"
+                FindCharacter = FindCharacterByName,
+                AddCharacter = AddCharacter
             };
 
             foreach(MapRegion rr in Regions)

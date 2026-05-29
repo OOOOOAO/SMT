@@ -284,6 +284,7 @@ namespace SMT
             MapConf.CurrentEveLogFolderLocation = EVEManager.EVELogFolder;
 
             EVEManager.ZKillFeed.KillExpireTimeMinutes = MapConf.ZkillExpireTimeMinutes;
+            EVEManager.IntelTrails.TrailLifetime = TimeSpan.FromMinutes(MapConf.IntelTrailLifetimeMinutes);
 
             // load jump bridge data
             EVEManager.LoadJumpBridgeData();
@@ -930,6 +931,11 @@ namespace SMT
             if(e.PropertyName == "ShowZKillData")
             {
                 EVEManager.ZKillFeed.PauseUpdate = !MapConf.ShowZKillData;
+            }
+
+            if(e.PropertyName == "IntelTrailLifetimeMinutes")
+            {
+                EVEManager.IntelTrails.TrailLifetime = TimeSpan.FromMinutes(MapConf.IntelTrailLifetimeMinutes);
             }
 
             RegionUC.ReDrawMap(true);

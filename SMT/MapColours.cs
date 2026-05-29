@@ -93,6 +93,14 @@ namespace SMT
         [DisplayName("Warning / 警告")]
         public Color IntelOverlayColour { get; set; }
 
+        [Category("Intel / 情报")]
+        [DisplayName("Trail / 航迹")]
+        public Color IntelTrailColour { get; set; }
+
+        [Category("Intel / 情报")]
+        [DisplayName("Trail Selected / 选中航迹")]
+        public Color IntelTrailSelectedColour { get; set; }
+
         [Category("Navigation / 导航")]
         [DisplayName("In Range / 范围内")]
         public Color JumpRangeInColour { get; set; }

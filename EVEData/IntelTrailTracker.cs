@@ -1,30 +1,26 @@
 //-----------------------------------------------------------------------
-// Intel Trail Tracker (DEMO)
+// Intel Trail Tracker
 //
-// Track the movement of an "enemy" mentioned in intel chat. Each intel
+// Track the movement of enemies mentioned in intel chat. Each intel
 // line typically looks like:
 //
-//   <Reporter> > <System> <EnemyName1> [<EnemyName2> ...] <Ship> +N nv
+//   <Reporter> > <System>  <EnemyName1>  <EnemyName2>  <Ship> nv
 //
-// We do NOT have ESI character lookup yet for hostile pilots, so for
-// this demo we apply a coarse heuristic:
-//   - tokenise the intel text
-//   - throw away tokens we can identify (matched system names, ship
-//     types, count markers, common noise words)
-//   - the first remaining token is taken as the "enemy id"
+// EVE client inserts double-spaces between linked items (system names,
+// character names, ship types). We exploit this structure:
+//   1. Split on two-or-more spaces → segments (each = one entity)
+//   2. Discard segments that match known systems, ships, noise, or
+//      Chinese ship names
+//   3. All survivors are enemy candidates
 //
-// This will misfire on:
-//   - multiple hostile pilots in one report (we pick only the first)
-//   - misspellings / abbreviations
-//   - reports with no name at all (general "+5 reds")
-//
-// But it is good enough to *see* whether trails-on-the-map is a useful
-// idea before investing in a proper parser.
+// Falls back to old single-space tokenisation when the line contains
+// no double-space separators.
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SMT.EVEData
 {
@@ -100,7 +96,7 @@ namespace SMT.EVEData
         }
 
         /// <summary>
-        /// Tokens we throw away while looking for the enemy id. Anything in this
+        /// Tokens we throw away while looking for enemy ids. Anything in this
         /// list is *definitely not* a pilot name.
         /// </summary>
         private static readonly HashSet<string> NoiseTokens = new HashSet<string>(
@@ -122,48 +118,111 @@ namespace SMT.EVEData
             "interdictor", "dictor", "hictor",
             "+1", "+2", "+3", "+4", "+5", "+6", "+7", "+8", "+9", "+10",
             "?", "??", "???", "...", "..", ".", ",", ";", ":", "!", "-",
+
+            // Phase-2 additions — intel shorthand & filler words
+            "hct", "ess", "mln", "min", "mb", "omw", "rgr", "kiki",
+            "jumped", "jumping", "jump", "back", "out", "into", "through",
+            "visual", "any", "those", "where", "here", "there",
+            "got", "it", "we", "up", "down",
+            "cloaked", "off", "like", "both", "need",
+            "please", "give", "accurate", "numbers", "when",
+            "ur", "reporting", "could", "be",
+            "power", "prospect", "cat", "navy",
+            "scanner", "probes", "ansi",
         };
 
         /// <summary>
+        /// EVE character names cannot contain CJK characters. Any segment that
+        /// contains Chinese/Japanese/Korean glyphs is definitely a ship name,
+        /// game term, or chatter — never an enemy pilot name.
+        /// </summary>
+        private static bool ContainsCJK(string s)
+        {
+            foreach(char c in s)
+            {
+                // CJK Unified Ideographs (U+4E00–U+9FFF) + Extension A (U+3400–U+4DBF)
+                if(c >= '\u4E00' && c <= '\u9FFF') return true;
+                if(c >= '\u3400' && c <= '\u4DBF') return true;
+            }
+            return false;
+        }
+
+        /// <summary>Regex for the Kill: prefix line format.</summary>
+        private static readonly Regex KillPrefixRegex = new Regex(
+            @"^\s*kill\s*:\s*(.+)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Regex to strip parenthesized ship info, e.g. "(Nemesis)", "(预言级)".</summary>
+        private static readonly Regex ParenShipRegex = new Regex(
+            @"\([^)]+\)",
+            RegexOptions.Compiled);
+
+        /// <summary>Regex for double-space splitting.</summary>
+        private static readonly Regex DoubleSpaceRegex = new Regex(
+            @"\s{2,}",
+            RegexOptions.Compiled);
+
+        /// <summary>
         /// Process one intel line. Caller has already populated
-        /// <see cref="IntelData.Systems"/>. We pick an enemy id and append a
-        /// sighting in the *first* matched system (good enough for demo).
+        /// <see cref="IntelData.Systems"/>. We extract enemy candidates
+        /// and append a sighting in the *first* matched system for each.
         /// </summary>
         public void Ingest(IntelData id, IEnumerable<string> shipNames)
         {
             if(id == null) return;
-            if(id.ClearNotification) return;            // demo: skip clears
+            if(id.ClearNotification) return;
             if(id.Systems == null || id.Systems.Count == 0) return;
 
-            string enemyId = ExtractEnemyId(id.IntelString, id.Systems, shipNames);
-            if(string.IsNullOrEmpty(enemyId)) return;
+            string intelText = id.IntelString;
+
+            // --- Handle "Kill:" prefix → remove trail instead of adding ---
+            var killMatch = KillPrefixRegex.Match(intelText ?? string.Empty);
+            if(killMatch.Success)
+            {
+                string killBody = killMatch.Groups[1].Value.Trim();
+                // Strip parenthesized ship info: "CharName (Ship)" → "CharName"
+                killBody = ParenShipRegex.Replace(killBody, "").Trim();
+                killBody = killBody.TrimEnd('*').Trim();
+                if(!string.IsNullOrEmpty(killBody))
+                {
+                    RemoveTrail(killBody);
+                }
+                return;
+            }
+
+            // --- Normal intel line: extract all enemy candidates ---
+            List<string> enemies = ExtractEnemyCandidates(intelText, id.Systems, shipNames);
+            if(enemies.Count == 0) return;
 
             string firstSystem = id.Systems[0];
 
             lock(_lock)
             {
-                if(!_trails.TryGetValue(enemyId, out var trail))
+                foreach(var enemyId in enemies)
                 {
-                    trail = new EnemyTrail { EnemyId = enemyId };
-                    _trails[enemyId] = trail;
-                }
+                    if(!_trails.TryGetValue(enemyId, out var trail))
+                    {
+                        trail = new EnemyTrail { EnemyId = enemyId };
+                        _trails[enemyId] = trail;
+                    }
 
-                // dedupe: don't record the same system back-to-back inside 30s
-                var lastPoint = trail.Points.Count > 0
-                    ? trail.Points[trail.Points.Count - 1]
-                    : null;
-                if(lastPoint != null &&
-                   string.Equals(lastPoint.SystemName, firstSystem, StringComparison.OrdinalIgnoreCase) &&
-                   (id.IntelTime - lastPoint.Time).TotalSeconds < 30)
-                {
-                    return;
-                }
+                    // dedupe: don't record the same system back-to-back inside 30s
+                    var lastPoint = trail.Points.Count > 0
+                        ? trail.Points[trail.Points.Count - 1]
+                        : null;
+                    if(lastPoint != null &&
+                       string.Equals(lastPoint.SystemName, firstSystem, StringComparison.OrdinalIgnoreCase) &&
+                       (id.IntelTime - lastPoint.Time).TotalSeconds < 30)
+                    {
+                        continue;
+                    }
 
-                trail.Points.Add(new IntelTrailPoint
-                {
-                    SystemName = firstSystem,
-                    Time = id.IntelTime,
-                });
+                    trail.Points.Add(new IntelTrailPoint
+                    {
+                        SystemName = firstSystem,
+                        Time = id.IntelTime,
+                    });
+                }
             }
         }
 
@@ -209,6 +268,18 @@ namespace SMT.EVEData
             return result;
         }
 
+        /// <summary>
+        /// Remove the trail for a specific enemy (e.g. after a ZKill confirms death).
+        /// </summary>
+        public bool RemoveTrail(string enemyId)
+        {
+            if(string.IsNullOrEmpty(enemyId)) return false;
+            lock(_lock)
+            {
+                return _trails.Remove(enemyId);
+            }
+        }
+
         public void Clear()
         {
             lock(_lock) { _trails.Clear(); }
@@ -216,46 +287,132 @@ namespace SMT.EVEData
 
         // -------- internal heuristics --------
 
-        private static string ExtractEnemyId(string intelText,
+        /// <summary>
+        /// Extract all enemy-candidate names from an intel line.
+        ///
+        /// Primary strategy: split on double-space boundaries (EVE client
+        /// inserts ≥2 spaces between linked entities) and test each segment.
+        ///
+        /// Fallback: if no double-spaces exist in the text, revert to the
+        /// original single-space tokenisation.
+        /// </summary>
+        internal static List<string> ExtractEnemyCandidates(string intelText,
                                              IList<string> matchedSystems,
                                              IEnumerable<string> shipNames)
         {
-            if(string.IsNullOrWhiteSpace(intelText)) return null;
+            var result = new List<string>();
+            if(string.IsNullOrWhiteSpace(intelText)) return result;
 
-            // Build per-call rejection sets so we treat 'Y-ZXIO' / 'Vargur' as known.
+            // Build per-call rejection sets
             var systems = new HashSet<string>(matchedSystems ?? Enumerable.Empty<string>(),
                                               StringComparer.OrdinalIgnoreCase);
             var ships = new HashSet<string>(shipNames ?? Enumerable.Empty<string>(),
                                             StringComparer.OrdinalIgnoreCase);
 
-            foreach(var raw in intelText.Split(new[] { ' ', '\t', '\r', '\n' },
-                                               StringSplitOptions.RemoveEmptyEntries))
+            bool hasDoubleSpaces = DoubleSpaceRegex.IsMatch(intelText);
+
+            if(hasDoubleSpaces)
             {
-                var tok = raw.Trim().Trim(',', '.', ';', ':', '!', '?', '(', ')', '[', ']');
-                if(tok.Length < 2) continue;
-
-                // skip count markers like "+3" or pure digits
-                if(tok[0] == '+' || tok.All(c => char.IsDigit(c))) continue;
-
-                if(NoiseTokens.Contains(tok)) continue;
-                if(systems.Contains(tok)) continue;
-                if(ships.Contains(tok)) continue;
-
-                // Also skip tokens that *contain* a known system name as substring,
-                // e.g. "Y-ZXIO," after trimming punctuation we'd already match,
-                // but defensive.
-                bool isKnown = false;
-                foreach(var s in systems)
+                // --- Double-space segmentation (primary path) ---
+                var segments = DoubleSpaceRegex.Split(intelText);
+                foreach(var rawSeg in segments)
                 {
-                    if(tok.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0) { isKnown = true; break; }
-                }
-                if(isKnown) continue;
+                    string seg = rawSeg.Trim();
+                    if(string.IsNullOrEmpty(seg)) continue;
 
-                // First survivor wins.
-                return tok;
+                    // Strip trailing * (EVE link artifact)
+                    seg = seg.TrimEnd('*').Trim();
+                    if(string.IsNullOrEmpty(seg)) continue;
+
+                    // Strip parenthesized ship info: "(Nemesis)", "(预言级)"
+                    seg = ParenShipRegex.Replace(seg, "").Trim();
+                    if(string.IsNullOrEmpty(seg)) continue;
+
+                    // Strip leading & at segment edges (e.g. "& red hound")
+                    seg = seg.Trim('&').Trim();
+                    if(string.IsNullOrEmpty(seg)) continue;
+
+                    // Skip short junk
+                    if(seg.Length < 2) continue;
+
+                    // Skip count markers like "+3" or pure digits
+                    if(seg[0] == '+' && seg.Length <= 3) continue;
+                    if(seg.All(c => char.IsDigit(c))) continue;
+
+                    // Check as whole segment against rejection sets
+                    if(NoiseTokens.Contains(seg)) continue;
+                    if(systems.Contains(seg)) continue;
+                    if(ships.Contains(seg)) continue;
+                    if(ContainsCJK(seg)) continue;
+
+                    // Also check if segment *contains* a system name as
+                    // substring (defensive against "Y-ZXIO*" after trim)
+                    bool isKnown = false;
+                    foreach(var s in systems)
+                    {
+                        if(seg.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            isKnown = true;
+                            break;
+                        }
+                    }
+                    if(isKnown) continue;
+
+                    // For multi-word segments, also check if every word is noise
+                    // (e.g. "ess 5 min 205mln" — each sub-word is noise/number)
+                    if(seg.Contains(' '))
+                    {
+                        var subTokens = seg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        bool allNoise = subTokens.All(t =>
+                        {
+                            var st = t.Trim(',', '.', ';', ':', '!', '?').TrimEnd('*');
+                            return st.Length < 2 ||
+                                   st.All(c => char.IsDigit(c)) ||
+                                   (st[0] == '+' && st.Length <= 3) ||
+                                   NoiseTokens.Contains(st) ||
+                                   ships.Contains(st) ||
+                                   ContainsCJK(st);
+                        });
+                        if(allNoise) continue;
+                    }
+
+                    // Survivor — this segment is an enemy candidate
+                    result.Add(seg);
+                }
+            }
+            else
+            {
+                // --- Fallback: single-space tokenisation (legacy path) ---
+                foreach(var raw in intelText.Split(new[] { ' ', '\t', '\r', '\n' },
+                                                   StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var tok = raw.Trim().Trim(',', '.', ';', ':', '!', '?', '(', ')', '[', ']');
+                    tok = tok.TrimEnd('*');
+                    if(tok.Length < 2) continue;
+
+                    // skip count markers like "+3" or pure digits
+                    if(tok[0] == '+' || tok.All(c => char.IsDigit(c))) continue;
+
+                    if(NoiseTokens.Contains(tok)) continue;
+                    if(systems.Contains(tok)) continue;
+                    if(ships.Contains(tok)) continue;
+                    if(ContainsCJK(tok)) continue;
+
+                    // Also skip tokens that *contain* a known system name as
+                    // substring
+                    bool isKnown = false;
+                    foreach(var s in systems)
+                    {
+                        if(tok.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0) { isKnown = true; break; }
+                    }
+                    if(isKnown) continue;
+
+                    // Collect all survivors (not just the first)
+                    result.Add(tok);
+                }
             }
 
-            return null;
+            return result;
         }
     }
 }

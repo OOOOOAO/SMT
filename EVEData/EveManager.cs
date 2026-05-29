@@ -3167,6 +3167,36 @@ namespace SMT.EVEData
         {
             ZKillFeed = new ZKillRedisQ();
             ZKillFeed.Initialise();
+
+            // P0: auto-clear intel trails when an enemy appears as victim on ZKill
+            ZKillFeed.KillsAddedEvent += ZKillFeed_ClearDeadTrails;
+        }
+
+        /// <summary>
+        /// When a kill comes in, resolve the victim name and remove their intel trail.
+        /// Best-effort: failures are silently swallowed so ZKill polling is never disrupted.
+        /// </summary>
+        private void ZKillFeed_ClearDeadTrails()
+        {
+            try
+            {
+                if(IntelTrails == null || ZKillFeed?.KillStream == null) return;
+
+                foreach(var kill in ZKillFeed.KillStream)
+                {
+                    if(kill.VictimCharacterID == 0) continue;
+
+                    string name = GetCharacterName(kill.VictimCharacterID);
+                    if(!string.IsNullOrEmpty(name))
+                    {
+                        IntelTrails.RemoveTrail(name);
+                    }
+                }
+            }
+            catch
+            {
+                // best-effort: never crash the ZKill pipeline
+            }
         }
 
         /// <summary>

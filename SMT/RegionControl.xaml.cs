@@ -2415,9 +2415,9 @@ namespace SMT
             if(trails.Count == 0) return;
 
             string selectedId = EM.IntelTrails.SelectedEnemyId;
-            // Cyan reads cleanly against the dark map and the red intel pulse rings
-            // — easy to tell "where the enemy has been" apart from "what is hot now".
-            Color intelColor = Colors.Cyan;
+            // Trail colours come from the active theme; fall back to Cyan if scheme is missing.
+            Color intelColor = MapConf.ActiveColourScheme.IntelTrailColour;
+            Color intelSelectedColor = MapConf.ActiveColourScheme.IntelTrailSelectedColour;
 
             // ---- visual budget ----
             const double idleStroke    = 1.5;     // unselected: very subtle dashed thread
@@ -2450,7 +2450,7 @@ namespace SMT
                         : idleAlphaMax * (1.0 - ageFactor);            // idle: fade with age
                     if(opacity < 0.02) continue;
 
-                    Color segColor = intelColor;
+                    Color segColor = isSelected ? intelSelectedColor : intelColor;
                     segColor.A = (byte)(opacity * 255);
 
                     var segBrush = new SolidColorBrush(segColor);
@@ -2497,7 +2497,7 @@ namespace SMT
                     if(i == trail.Points.Count - 1)
                     {
                         double dotSize = isSelected ? 8.0 : 5.0;
-                        Color dotColor = intelColor;
+                        Color dotColor = isSelected ? intelSelectedColor : intelColor;
                         double dotAlpha = isSelected ? activeAlpha : Math.Min(idleAlphaMax + 0.10, 0.4);
                         dotColor.A = (byte)(dotAlpha * 255);
                         var trailDotBrush = new SolidColorBrush(dotColor);

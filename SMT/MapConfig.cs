@@ -79,6 +79,8 @@ namespace SMT
 
         private int m_ZkillExpireTimeMinutes;
 
+        private int m_IntelTrailLifetimeMinutes = 10;
+
         private bool m_drawRoute = true;
 
         private bool m_followOnZoom = false;
@@ -1240,6 +1242,18 @@ namespace SMT
 
         public bool UseESIForCharacterPositions { get; set; }
 
+        [Category("Intel")]
+        [DisplayName("Trail Lifetime (min) / 航迹存活时间(分钟)")]
+        public int IntelTrailLifetimeMinutes
+        {
+            get => m_IntelTrailLifetimeMinutes;
+            set
+            {
+                m_IntelTrailLifetimeMinutes = value < 1 ? 1 : value;
+                OnPropertyChanged("IntelTrailLifetimeMinutes");
+            }
+        }
+
         public void SetDefaultColours()
         {
             // Space Dark map palette — aligned with Styles.xaml Phase 1 color system.
@@ -1275,6 +1289,8 @@ namespace SMT
 
                 IntelOverlayColour = Color.FromRgb(178, 34, 34),
                 IntelClearOverlayColour = Colors.Orange,
+                IntelTrailColour = Color.FromRgb(0, 255, 255),                                    // Cyan — distinct from red intel pulse
+                IntelTrailSelectedColour = Color.FromArgb(255, 88, 166, 255),                      // #58a6ff accent blue
 
                 NormalGateColour = (Color)ColorConverter.ConvertFromString("#FF30363D"),           // neutral connection line
                 ConstellationGateColour = (Color)ColorConverter.ConvertFromString("#FF444C56"),    // one step brighter
@@ -1363,7 +1379,7 @@ namespace SMT
             ToolBox_ShowJumpBridges = true;
             ToolBox_ShowSovOwner = true;
 
-            
+            IntelTrailLifetimeMinutes = 10;
 
         }
 

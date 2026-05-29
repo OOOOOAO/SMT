@@ -274,87 +274,37 @@ namespace SMT
 
         public bool ShowNPCKills
         {
-            get
-            {
-                return m_ShowNPCKills;
-            }
-
-            set
-            {
-                m_ShowNPCKills = value;
-
-                if(m_ShowNPCKills)
-                {
-                    ShowPodKills = false;
-                    ShowShipKills = false;
-                    ShowShipJumps = false;
-                }
-
-                OnPropertyChanged("ShowNPCKills");
-            }
+            get { return m_ShowNPCKills; }
+            set { m_ShowNPCKills = value; if(value) ClearOtherStatOverlays(nameof(ShowNPCKills)); OnPropertyChanged(nameof(ShowNPCKills)); }
         }
 
         public bool ShowPodKills
         {
-            get
-            {
-                return m_ShowPodKills;
-            }
-
-            set
-            {
-                m_ShowPodKills = value;
-                if(m_ShowPodKills)
-                {
-                    ShowNPCKills = false;
-                    ShowShipKills = false;
-                    ShowShipJumps = false;
-                }
-
-                OnPropertyChanged("ShowPodKills");
-            }
+            get { return m_ShowPodKills; }
+            set { m_ShowPodKills = value; if(value) ClearOtherStatOverlays(nameof(ShowPodKills)); OnPropertyChanged(nameof(ShowPodKills)); }
         }
 
         public bool ShowShipJumps
         {
-            get
-            {
-                return m_ShowShipJumps;
-            }
-
-            set
-            {
-                m_ShowShipJumps = value;
-                if(m_ShowShipJumps)
-                {
-                    ShowNPCKills = false;
-                    ShowPodKills = false;
-                    ShowShipKills = false;
-                }
-
-                OnPropertyChanged("ShowShipJumps");
-            }
+            get { return m_ShowShipJumps; }
+            set { m_ShowShipJumps = value; if(value) ClearOtherStatOverlays(nameof(ShowShipJumps)); OnPropertyChanged(nameof(ShowShipJumps)); }
         }
 
         public bool ShowShipKills
         {
-            get
-            {
-                return m_ShowShipKills;
-            }
+            get { return m_ShowShipKills; }
+            set { m_ShowShipKills = value; if(value) ClearOtherStatOverlays(nameof(ShowShipKills)); OnPropertyChanged(nameof(ShowShipKills)); }
+        }
 
-            set
-            {
-                m_ShowShipKills = value;
-                if(m_ShowShipKills)
-                {
-                    ShowNPCKills = false;
-                    ShowPodKills = false;
-                    ShowShipJumps = false;
-                }
-
-                OnPropertyChanged("ShowShipKills");
-            }
+        /// <summary>
+        /// Mutual exclusion for stat overlay toggles — when one is turned on, the others are turned off.
+        /// </summary>
+        private void ClearOtherStatOverlays(string except)
+        {
+            if(except != nameof(ShowNPCKills))  { m_ShowNPCKills = false;  OnPropertyChanged(nameof(ShowNPCKills)); }
+            if(except != nameof(ShowPodKills))  { m_ShowPodKills = false;  OnPropertyChanged(nameof(ShowPodKills)); }
+            if(except != nameof(ShowShipJumps)) { m_ShowShipJumps = false; OnPropertyChanged(nameof(ShowShipJumps)); }
+            if(except != nameof(ShowShipKills)) { m_ShowShipKills = false; OnPropertyChanged(nameof(ShowShipKills)); }
         }
 
         public bool ShowSovOwner
@@ -489,63 +439,40 @@ namespace SMT
             Brush TheraWHLinkBrush = new SolidColorBrush(MapConf.ActiveColourScheme.TheraEntranceSystem);
             Brush TurnurWHLinkBrush = new SolidColorBrush(MapConf.ActiveColourScheme.ThurnurEntranceSystem);
 
-            List<TheraConnection> currentTheraConnections = EM.TheraConnections.ToList();
+            AddWHConnectionOverlays(EM.TheraConnections.ToList().Select(tc => tc.System), TheraWHLinkBrush, ZINDEX_THERA);
+            AddWHConnectionOverlays(EM.TurnurConnections.ToList().Select(tc => tc.System), TurnurWHLinkBrush, ZINDEX_TURNER);
+        }
 
-            foreach(TheraConnection tc in currentTheraConnections)
+        /// <summary>
+        /// Renders wormhole connection overlays for the given systems (shared by Thera and Turnur).
+        /// </summary>
+        private void AddWHConnectionOverlays(IEnumerable<string> systemNames, Brush brush, int zIndex)
+        {
+            foreach(string systemName in systemNames)
             {
-                if(Region.IsSystemOnMap(tc.System))
+                if(Region.IsSystemOnMap(systemName))
                 {
-                    MapSystem ms = Region.MapSystems[tc.System];
+                    MapSystem ms = Region.MapSystems[systemName];
 
-                    Shape TheraShape;
+                    Shape shape;
                     if(ms.ActualSystem.HasNPCStation)
                     {
-                        TheraShape = new Rectangle() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
+                        shape = new Rectangle() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
                     }
                     else
                     {
-                        TheraShape = new Ellipse() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
+                        shape = new Ellipse() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
                     }
 
-                    TheraShape.Stroke = TheraWHLinkBrush;
-                    TheraShape.StrokeThickness = 1.5;
-                    TheraShape.StrokeLineJoin = PenLineJoin.Round;
-                    TheraShape.Fill = TheraWHLinkBrush;
+                    shape.Stroke = brush;
+                    shape.StrokeThickness = 1.5;
+                    shape.StrokeLineJoin = PenLineJoin.Round;
+                    shape.Fill = brush;
 
-                    Canvas.SetLeft(TheraShape, ms.Layout.X - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetTop(TheraShape, ms.Layout.Y - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetZIndex(TheraShape, ZINDEX_THERA);
-                    MainCanvas.Children.Add(TheraShape);
-                }
-            }
-
-            List<TurnurConnection> currentTurnurConnections = EM.TurnurConnections.ToList();
-
-            foreach(TurnurConnection tc in currentTurnurConnections)
-            {
-                if(Region.IsSystemOnMap(tc.System))
-                {
-                    MapSystem ms = Region.MapSystems[tc.System];
-
-                    Shape TurnurShape;
-                    if(ms.ActualSystem.HasNPCStation)
-                    {
-                        TurnurShape = new Rectangle() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
-                    }
-                    else
-                    {
-                        TurnurShape = new Ellipse() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
-                    }
-
-                    TurnurShape.Stroke = TurnurWHLinkBrush;
-                    TurnurShape.StrokeThickness = 1.5;
-                    TurnurShape.StrokeLineJoin = PenLineJoin.Round;
-                    TurnurShape.Fill = TurnurWHLinkBrush;
-
-                    Canvas.SetLeft(TurnurShape, ms.Layout.X - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetTop(TurnurShape, ms.Layout.Y - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetZIndex(TurnurShape, ZINDEX_TURNER);
-                    MainCanvas.Children.Add(TurnurShape);
+                    Canvas.SetLeft(shape, ms.Layout.X - (SYSTEM_SHAPE_OFFSET + 3));
+                    Canvas.SetTop(shape, ms.Layout.Y - (SYSTEM_SHAPE_OFFSET + 3));
+                    Canvas.SetZIndex(shape, zIndex);
+                    MainCanvas.Children.Add(shape);
                 }
             }
         }
@@ -1036,7 +963,7 @@ namespace SMT
             // 3 = warning
             NameTrackingLocationMap.Clear();
 
-            foreach(EVEData.LocalCharacter c in EM.LocalCharacters)
+            foreach(EVEData.LocalCharacter c in EM.GetLocalCharactersCopy())
             {
                 // ignore characters out of this Map..
                 if(!Region.IsSystemOnMap(c.Location))

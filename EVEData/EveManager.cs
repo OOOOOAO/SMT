@@ -67,12 +67,12 @@ namespace SMT.EVEData
         private Dictionary<string, int> intelFileReadPos;
 
         /// <summary>
-        /// Read position map for the intel files
+        /// Read position map for the game log files
         /// </summary>
         private Dictionary<string, int> gameFileReadPos;
 
         /// <summary>
-        /// Read position map for the intel files
+        /// Maps game log file paths to the character name that owns each log
         /// </summary>
         private Dictionary<string, string> gamelogFileCharacterMap;
 
@@ -196,7 +196,7 @@ namespace SMT.EVEData
             CharacterIDToName = new SerializableDictionary<int, string>();
             AllianceIDToName = new SerializableDictionary<int, string>();
             AllianceIDToTicker = new SerializableDictionary<int, string>();
-            NameToSystem = new Dictionary<string, System>();
+            NameToSystem = new Dictionary<string, System>(StringComparer.OrdinalIgnoreCase);
             IDToSystem = new Dictionary<long, System>();
 
             ServerInfo = new EVEData.Server();
@@ -3001,7 +3001,7 @@ namespace SMT.EVEData
                     }
                 }
 
-                // step 2, itendify all commandline operations by flooding out one from the frontlines
+                // step 2, identify all commandline operations by flooding out one from the frontlines
                 foreach(FactionWarfareSystemInfo fws in FactionWarfareSystems)
                 {
                     if(fws.SystemState == FactionWarfareSystemInfo.State.Frontline)
@@ -3022,7 +3022,7 @@ namespace SMT.EVEData
                     }
                 }
 
-                // step 3, itendify all Rearguard operations by flooding out one from the command lines
+                // step 3, identify all Rearguard operations by flooding out one from the command lines
                 foreach(FactionWarfareSystemInfo fws in FactionWarfareSystems)
                 {
                     if(fws.SystemState == FactionWarfareSystemInfo.State.CommandLineOperation)
@@ -3490,11 +3490,20 @@ namespace SMT.EVEData
                                         }
                                     }
 
-                                    foreach(System sys in Systems)
+                                    // Fast path: exact match via dictionary (O(1) instead of O(n))
+                                    if(NameToSystem.ContainsKey(s))
                                     {
-                                        if(sys.Name.IndexOf(s, StringComparison.OrdinalIgnoreCase) == 0 || s.IndexOf(sys.Name, StringComparison.OrdinalIgnoreCase) == 0)
+                                        id.Systems.Add(s);
+                                    }
+                                    else
+                                    {
+                                        // Slow path: prefix matching for partial system names
+                                        foreach(System sys in Systems)
                                         {
-                                            id.Systems.Add(sys.Name);
+                                            if(sys.Name.IndexOf(s, StringComparison.OrdinalIgnoreCase) == 0 || s.IndexOf(sys.Name, StringComparison.OrdinalIgnoreCase) == 0)
+                                            {
+                                                id.Systems.Add(sys.Name);
+                                            }
                                         }
                                     }
                                 }
@@ -3744,7 +3753,7 @@ namespace SMT.EVEData
         {
             new Thread(async () =>
             {
-                Thread.CurrentThread.IsBackground = false;
+                Thread.CurrentThread.IsBackground = true;
 
 
                 // split the intial requests into 3 for a better initialisation

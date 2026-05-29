@@ -20,6 +20,13 @@ namespace SMT
     /// </summary>
     public partial class RegionControl : UserControl, INotifyPropertyChanged
     {
+        private static SolidColorBrush FrozenBrush(Color c)
+        {
+            var b = new SolidColorBrush(c);
+            b.Freeze();
+            return b;
+        }
+
         public static readonly RoutedEvent UniverseSystemSelectEvent = EventManager.RegisterRoutedEvent("UniverseSystemSelect", RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(UniverseControl));
         private const int SYSTEM_LINK_INDEX = 19;
         private const double SYSTEM_REGION_TEXT_WIDTH = 100;
@@ -58,7 +65,7 @@ namespace SMT
 
         private const int THERA_Z_INDEX = 22;
 
-        private readonly Brush SelectedAllianceBrush = new SolidColorBrush(Color.FromArgb(180, 200, 200, 200));
+        private readonly Brush SelectedAllianceBrush = FrozenBrush(Color.FromArgb(180, 200, 200, 200));
         private Dictionary<string, EVEData.EveManager.JumpShip> activeJumpSpheres;
         private string currentCharacterJumpSystem;
         private string currentJumpCharacter;
@@ -99,13 +106,13 @@ namespace SMT
         private Dictionary<string, List<KeyValuePair<int, string>>> NameTrackingLocationMap = new Dictionary<string, List<KeyValuePair<int, string>>>();
         private long SelectedAlliance;
         private bool showJumpDistance;
-        private Brush StandingBadBrush = new SolidColorBrush(Color.FromArgb(110, 196, 72, 6));
-        private Brush StandingGoodBrush = new SolidColorBrush(Color.FromArgb(110, 43, 101, 196));
-        private Brush StandingNeutBrush = new SolidColorBrush(Color.FromArgb(110, 140, 140, 140));
+        private Brush StandingBadBrush = FrozenBrush(Color.FromArgb(110, 196, 72, 6));
+        private Brush StandingGoodBrush = FrozenBrush(Color.FromArgb(110, 43, 101, 196));
+        private Brush StandingNeutBrush = FrozenBrush(Color.FromArgb(110, 140, 140, 140));
 
         // Constant Colours
-        private Brush StandingVBadBrush = new SolidColorBrush(Color.FromArgb(110, 148, 5, 5));
-        private Brush StandingVGoodBrush = new SolidColorBrush(Color.FromArgb(110, 5, 34, 120));
+        private Brush StandingVBadBrush = FrozenBrush(Color.FromArgb(110, 148, 5, 5));
+        private Brush StandingVGoodBrush = FrozenBrush(Color.FromArgb(110, 5, 34, 120));
 
         /// <summary>Standing tier colours for map tickers: same semantic tiers as the kill feed, higher luminance for dark map backgrounds.</summary>
         private static readonly SolidColorBrush TickerStandingTerribleBrush;
@@ -391,6 +398,7 @@ namespace SMT
             }
 
             Brush ActiveSovFightBrush = new SolidColorBrush(Colors.DarkRed);
+            ActiveSovFightBrush.Freeze();
 
             foreach(SOVCampaign sc in EM.ActiveSovCampaigns)
             {
@@ -437,7 +445,9 @@ namespace SMT
         public void AddWHLinksSystemsToMap()
         {
             Brush TheraWHLinkBrush = new SolidColorBrush(MapConf.ActiveColourScheme.TheraEntranceSystem);
+            TheraWHLinkBrush.Freeze();
             Brush TurnurWHLinkBrush = new SolidColorBrush(MapConf.ActiveColourScheme.ThurnurEntranceSystem);
+            TurnurWHLinkBrush.Freeze();
 
             AddWHConnectionOverlays(EM.TheraConnections.ToList().Select(tc => tc.System), TheraWHLinkBrush, ZINDEX_THERA);
             AddWHConnectionOverlays(EM.TurnurConnections.ToList().Select(tc => tc.System), TurnurWHLinkBrush, ZINDEX_TURNER);
@@ -480,6 +490,7 @@ namespace SMT
         public void AddPOIsToMap()
         {
             Brush POIBrush = new SolidColorBrush(Colors.White);
+            POIBrush.Freeze();
 
             foreach(POI p in EM.PointsOfInterest)
             {
@@ -625,13 +636,17 @@ namespace SMT
             }
 
             Brush trigBrush = new SolidColorBrush(Colors.DarkRed);
+            trigBrush.Freeze();
             Brush trigOutlineBrush = new SolidColorBrush(Colors.Black);
+            trigOutlineBrush.Freeze();
             Brush trigSecStatusChangeBrush = new SolidColorBrush(Colors.Orange);
+            trigSecStatusChangeBrush.Freeze();
 
             ImageBrush ib = new ImageBrush();
             ib.TileMode = TileMode.Tile;
             ib.Stretch = Stretch.None;
             ib.ImageSource = trigLogoImage;
+            ib.Freeze();
 
             foreach(KeyValuePair<string, EVEData.MapSystem> kvp in Region.MapSystems)
             {
@@ -1066,9 +1081,13 @@ namespace SMT
                 double textXOffset = 6;
 
                 SolidColorBrush fleetMemberText = new SolidColorBrush(MapConf.ActiveColourScheme.FleetMemberTextColour);
+                fleetMemberText.Freeze();
                 SolidColorBrush localCharacterText = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterTextColour);
+                localCharacterText.Freeze();
                 SolidColorBrush localCharacterOfflineText = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterOfflineTextColour);
+                localCharacterOfflineText.Freeze();
                 SolidColorBrush characterTextOutline = new SolidColorBrush(Colors.Black);
+                characterTextOutline.Freeze();
 
                 if(MapConf.ShowCompactCharactersOnMap)
                 {
@@ -1169,7 +1188,9 @@ namespace SMT
 
                 Shape highlightSystemCircle = new Ellipse() { Height = circleSize, Width = circleSize };
 
-                highlightSystemCircle.Stroke = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterHighlightColour);
+                var charHighlightBrush = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterHighlightColour);
+                charHighlightBrush.Freeze();
+                highlightSystemCircle.Stroke = charHighlightBrush;
                 highlightSystemCircle.StrokeThickness = 3;
 
                 RotateTransform rt = new RotateTransform();
@@ -1228,7 +1249,9 @@ namespace SMT
                 {
                     EVEData.MapSystem mss = Region.MapSystems[s];
                     Shape WarninghighlightSystemCircle = new Ellipse() { Height = warningCircleSize, Width = warningCircleSize };
-                    WarninghighlightSystemCircle.Stroke = new SolidColorBrush(Colors.IndianRed);
+                    var warningBrush = new SolidColorBrush(Colors.IndianRed);
+                    warningBrush.Freeze();
+                    WarninghighlightSystemCircle.Stroke = warningBrush;
                     WarninghighlightSystemCircle.StrokeThickness = 3;
 
                     Canvas.SetLeft(WarninghighlightSystemCircle, mss.Layout.X - warningCircleSizeOffset);
@@ -1255,21 +1278,31 @@ namespace SMT
             DataLargeColorDelta.B = (byte)(DataLargeColorDelta.B * 0.4);
 
             SolidColorBrush dataColor = new SolidColorBrush(DataColor);
+            dataColor.Freeze();
             SolidColorBrush infoColour = dataColor;
 
             SolidColorBrush PositiveDeltaColor = new SolidColorBrush(Colors.Green);
+            PositiveDeltaColor.Freeze();
             SolidColorBrush NegativeDeltaColor = new SolidColorBrush(Colors.Red);
+            NegativeDeltaColor.Freeze();
 
             Brush JumpInRange = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+            JumpInRange.Freeze();
             Brush JumpInRangeMulti = new SolidColorBrush(Colors.Black);
+            JumpInRangeMulti.Freeze();
 
             SolidColorBrush infoColourDelta = new SolidColorBrush(DataLargeColorDelta);
+            infoColourDelta.Freeze();
 
             SolidColorBrush zkbColour = new SolidColorBrush(MapConf.ActiveColourScheme.ZKillDataOverlay);
+            zkbColour.Freeze();
 
             SolidColorBrush infoLargeColour = new SolidColorBrush(DataLargeColor);
+            infoLargeColour.Freeze();
             SolidColorBrush infoVulnerable = new SolidColorBrush(MapConf.ActiveColourScheme.SOVStructureVulnerableColour);
+            infoVulnerable.Freeze();
             SolidColorBrush infoVulnerableSoon = new SolidColorBrush(MapConf.ActiveColourScheme.SOVStructureVulnerableSoonColour);
+            infoVulnerableSoon.Freeze();
 
             BridgeInfoStackPanel.Children.Clear();
             if(!string.IsNullOrEmpty(currentJumpCharacter))
@@ -1291,7 +1324,9 @@ namespace SMT
                     l.Content = text;
                     l.FontSize = 14;
                     l.FontWeight = FontWeights.Bold;
-                    l.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                    var inRegionTextBrush = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                    inRegionTextBrush.Freeze();
+                    l.Foreground = inRegionTextBrush;
 
                     BridgeInfoStackPanel.Children.Add(l);
                 }
@@ -1305,7 +1340,9 @@ namespace SMT
                 l.Content = text;
                 l.FontSize = 14;
                 l.FontWeight = FontWeights.Bold;
-                l.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                var inRegionTextBrush2 = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                inRegionTextBrush2.Freeze();
+                l.Foreground = inRegionTextBrush2;
 
                 BridgeInfoStackPanel.Children.Add(l);
             }
@@ -1684,6 +1721,7 @@ namespace SMT
 
             // Draw Infrastructure Upgrade indicators (green circles)
             Brush SysOutlineBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SystemOutlineColour);
+            SysOutlineBrush.Freeze();
             foreach(KeyValuePair<string, EVEData.MapSystem> kvp in Region.MapSystems)
             {
                 EVEData.MapSystem sys = kvp.Value;
@@ -1700,7 +1738,9 @@ namespace SMT
                     UpgradeIndicator.Stroke = SysOutlineBrush;
                     UpgradeIndicator.StrokeThickness = 1.0;
                     UpgradeIndicator.StrokeLineJoin = PenLineJoin.Round;
-                    UpgradeIndicator.Fill = new SolidColorBrush(Colors.LimeGreen);
+                    var limeGreenBrush = new SolidColorBrush(Colors.LimeGreen);
+                    limeGreenBrush.Freeze();
+                    UpgradeIndicator.Fill = limeGreenBrush;
 
                     Canvas.SetLeft(UpgradeIndicator, sys.Layout.X - 14);
                     Canvas.SetTop(UpgradeIndicator, sys.Layout.Y - 3);
@@ -1711,21 +1751,21 @@ namespace SMT
             }
         }
 
-        private Brush Gallente_FL = new SolidColorBrush(Color.FromArgb(100, 73, 171, 104));
-        private Brush Gallente_CLO = new SolidColorBrush(Color.FromArgb(100, 36, 90, 52));
-        private Brush Gallente_RG = new SolidColorBrush(Color.FromArgb(100, 13, 35, 19));
+        private Brush Gallente_FL = FrozenBrush(Color.FromArgb(100, 73, 171, 104));
+        private Brush Gallente_CLO = FrozenBrush(Color.FromArgb(100, 36, 90, 52));
+        private Brush Gallente_RG = FrozenBrush(Color.FromArgb(100, 13, 35, 19));
 
-        private Brush Caldari_FL = new SolidColorBrush(Color.FromArgb(100, 14, 186, 207));
-        private Brush Caldari_CLO = new SolidColorBrush(Color.FromArgb(100, 0, 110, 129));
-        private Brush Caldari_RG = new SolidColorBrush(Color.FromArgb(100, 0, 36, 43));
+        private Brush Caldari_FL = FrozenBrush(Color.FromArgb(100, 14, 186, 207));
+        private Brush Caldari_CLO = FrozenBrush(Color.FromArgb(100, 0, 110, 129));
+        private Brush Caldari_RG = FrozenBrush(Color.FromArgb(100, 0, 36, 43));
 
-        private Brush Amarr_FL = new SolidColorBrush(Color.FromArgb(100, 216, 191, 25));
-        private Brush Amarr_CLO = new SolidColorBrush(Color.FromArgb(100, 138, 114, 14));
-        private Brush Amarr_RG = new SolidColorBrush(Color.FromArgb(100, 46, 36, 5));
+        private Brush Amarr_FL = FrozenBrush(Color.FromArgb(100, 216, 191, 25));
+        private Brush Amarr_CLO = FrozenBrush(Color.FromArgb(100, 138, 114, 14));
+        private Brush Amarr_RG = FrozenBrush(Color.FromArgb(100, 46, 36, 5));
 
-        private Brush Minmatar_FL = new SolidColorBrush(Color.FromArgb(100, 221, 74, 79));
-        private Brush Minmatar_CLO = new SolidColorBrush(Color.FromArgb(100, 140, 34, 41));
-        private Brush Minmatar_RG = new SolidColorBrush(Color.FromArgb(100, 54, 11, 14));
+        private Brush Minmatar_FL = FrozenBrush(Color.FromArgb(100, 221, 74, 79));
+        private Brush Minmatar_CLO = FrozenBrush(Color.FromArgb(100, 140, 34, 41));
+        private Brush Minmatar_RG = FrozenBrush(Color.FromArgb(100, 54, 11, 14));
 
         private Brush GetBrushForFWState(FactionWarfareSystemInfo.State state, int Owner)
         {
@@ -1784,8 +1824,11 @@ namespace SMT
             }
 
             Brush FWLineBrushA = new SolidColorBrush(Colors.Yellow);
+            FWLineBrushA.Freeze();
             Brush FWLineBrushB = new SolidColorBrush(Colors.Orange);
+            FWLineBrushB.Freeze();
             Brush FWLineBrushC = new SolidColorBrush(Colors.OrangeRed);
+            FWLineBrushC.Freeze();
 
             DoubleCollection dashes = new DoubleCollection();
             dashes.Add(1.0);
@@ -1949,6 +1992,9 @@ namespace SMT
                 double duration   = 1.4;
                 double stagger    = duration / ringCount;
 
+                var ringBrush = new SolidColorBrush(ringColor);
+                ringBrush.Freeze();
+
                 for(int i = 0; i < ringCount; i++)
                 {
                     double delaySeconds = i * stagger;
@@ -1957,7 +2003,7 @@ namespace SMT
                     {
                         Width             = startSize,
                         Height            = startSize,
-                        Stroke            = new SolidColorBrush(ringColor),
+                        Stroke            = ringBrush,
                         StrokeThickness   = 2.0,
                         Fill              = Brushes.Transparent,
                         IsHitTestVisible  = false,
@@ -2012,7 +2058,7 @@ namespace SMT
                 {
                     Width            = 6,
                     Height           = 6,
-                    Fill             = new SolidColorBrush(ringColor),
+                    Fill             = ringBrush,
                     IsHitTestVisible = false,
                     Opacity          = 0.8,
                 };
@@ -2030,7 +2076,9 @@ namespace SMT
                 return;
 
             Brush RouteBrush = new SolidColorBrush(Colors.Yellow);
+            RouteBrush.Freeze();
             Brush RouteAnsiblexBrush = new SolidColorBrush(Colors.DarkGray);
+            RouteAnsiblexBrush.Freeze();
 
             // no active route
             if(ActiveCharacter.ActiveRoute.Count == 0)
@@ -2180,7 +2228,8 @@ namespace SMT
 
                         double stagger   = duration / 3.0;
 
-
+                        var intelRingBrush = new SolidColorBrush(baseColor);
+                        intelRingBrush.Freeze();
 
                         for(int ri = 0; ri < ringCount; ri++)
 
@@ -2198,7 +2247,7 @@ namespace SMT
 
                                 Height           = startSize,
 
-                                Stroke           = new SolidColorBrush(baseColor),
+                                Stroke           = intelRingBrush,
 
                                 StrokeThickness  = id.ClearNotification ? 1.5 : 2.5,
 
@@ -2310,6 +2359,9 @@ namespace SMT
 
                         dotFill.A = (byte)(dotOpacity * 255);
 
+                        var dotFillBrush = new SolidColorBrush(dotFill);
+                        dotFillBrush.Freeze();
+
                         Ellipse fillDot = new Ellipse
 
                         {
@@ -2318,7 +2370,7 @@ namespace SMT
 
                             Height           = 14,
 
-                            Fill             = new SolidColorBrush(dotFill),
+                            Fill             = dotFillBrush,
 
                             IsHitTestVisible = false,
 
@@ -2401,13 +2453,16 @@ namespace SMT
                     Color segColor = intelColor;
                     segColor.A = (byte)(opacity * 255);
 
+                    var segBrush = new SolidColorBrush(segColor);
+                    segBrush.Freeze();
+
                     var line = new System.Windows.Shapes.Line
                     {
                         X1 = a.Layout.X,
                         Y1 = a.Layout.Y,
                         X2 = b.Layout.X,
                         Y2 = b.Layout.Y,
-                        Stroke = new SolidColorBrush(segColor),
+                        Stroke = segBrush,
                         StrokeThickness = isSelected ? activeStroke : idleStroke,
                         StrokeStartLineCap = PenLineCap.Round,
                         StrokeEndLineCap = PenLineCap.Round,
@@ -2445,11 +2500,13 @@ namespace SMT
                         Color dotColor = intelColor;
                         double dotAlpha = isSelected ? activeAlpha : Math.Min(idleAlphaMax + 0.10, 0.4);
                         dotColor.A = (byte)(dotAlpha * 255);
+                        var trailDotBrush = new SolidColorBrush(dotColor);
+                        trailDotBrush.Freeze();
                         var dot = new Ellipse
                         {
                             Width = dotSize,
                             Height = dotSize,
-                            Fill = new SolidColorBrush(dotColor),
+                            Fill = trailDotBrush,
                             IsHitTestVisible = false,
                         };
                         Canvas.SetLeft(dot, b.Layout.X - dotSize / 2.0);
@@ -2520,32 +2577,48 @@ namespace SMT
         {
             // brushes
             Brush SysOutlineBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SystemOutlineColour);
+            SysOutlineBrush.Freeze();
             Brush SysInRegionBrush = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemColour);
+            SysInRegionBrush.Freeze();
             Brush SysOutRegionBrush = new SolidColorBrush(MapConf.ActiveColourScheme.OutRegionSystemColour);
+            SysOutRegionBrush.Freeze();
 
             Brush SysInRegionDarkBrush = new SolidColorBrush(DarkenColour(MapConf.ActiveColourScheme.InRegionSystemColour));
+            SysInRegionDarkBrush.Freeze();
             Brush SysOutRegionDarkBrush = new SolidColorBrush(DarkenColour(MapConf.ActiveColourScheme.OutRegionSystemColour));
+            SysOutRegionDarkBrush.Freeze();
 
             Brush HasIceBrush = new SolidColorBrush(Colors.LightBlue);
+            HasIceBrush.Freeze();
 
             Brush SysInRegionTextBrush = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+            SysInRegionTextBrush.Freeze();
             Brush SysOutRegionTextBrush = new SolidColorBrush(MapConf.ActiveColourScheme.OutRegionSystemTextColour);
+            SysOutRegionTextBrush.Freeze();
 
             Brush FriendlyJumpBridgeBrush = new SolidColorBrush(MapConf.ActiveColourScheme.FriendlyJumpBridgeColour);
+            FriendlyJumpBridgeBrush.Freeze();
             Brush DisabledJumpBridgeBrush = new SolidColorBrush(MapConf.ActiveColourScheme.DisabledJumpBridgeColour);
+            DisabledJumpBridgeBrush.Freeze();
 
             Brush JumpInRange = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+            JumpInRange.Freeze();
             Brush JumpInRangeMulti = new SolidColorBrush(Colors.Black);
+            JumpInRangeMulti.Freeze();
 
             Brush Incursion = new SolidColorBrush(MapConf.ActiveColourScheme.ActiveIncursionColour);
+            Incursion.Freeze();
 
             Brush ConstellationHighlight = new SolidColorBrush(MapConf.ActiveColourScheme.ConstellationHighlightColour);
+            ConstellationHighlight.Freeze();
 
             Brush DarkTextColourBrush = new SolidColorBrush(Colors.Black);
+            DarkTextColourBrush.Freeze();
 
             Color bgtc = MapConf.ActiveColourScheme.MapBackgroundColour;
             bgtc.A = 192;
             Brush SysTextBackgroundBrush = new SolidColorBrush(bgtc);
+            SysTextBackgroundBrush.Freeze();
 
             Color bgd = MapConf.ActiveColourScheme.MapBackgroundColour;
 
@@ -2556,12 +2629,16 @@ namespace SMT
             bgd.B = (byte)(darkenFactor * bgd.B);
 
             Brush MapBackgroundBrushDarkend = new SolidColorBrush(bgd);
+            MapBackgroundBrushDarkend.Freeze();
 
             List<long> AlliancesKeyList = new List<long>();
 
             Brush NormalGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.NormalGateColour);
+            NormalGateBrush.Freeze();
             Brush ConstellationGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.ConstellationGateColour);
+            ConstellationGateBrush.Freeze();
             Brush RegionGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.RegionGateColour);
+            RegionGateBrush.Freeze();
 
             // cache all system links
             List<GateHelper> systemLinks = new List<GateHelper>();
@@ -2601,6 +2678,7 @@ namespace SMT
                 }
 
                 Brush securityColorFill = new SolidColorBrush(MapColours.GetSecStatusColour(trueSecVal, MapConf.ShowTrueSec));
+                securityColorFill.Freeze();
 
 
 
@@ -2711,7 +2789,9 @@ namespace SMT
                             r = (byte)(255 - (255 * (Blend - 0.5) / 0.5));
                         }
 
-                        SystemOutline.Fill = new SolidColorBrush(Color.FromRgb(r, g, 0));
+                        var admBrush = new SolidColorBrush(Color.FromRgb(r, g, 0));
+                        admBrush.Freeze();
+                        SystemOutline.Fill = admBrush;
                     }
 
                     SystemOutline.DataContext = mapSystem;
@@ -2911,7 +2991,9 @@ namespace SMT
                     CynoBeaconLogo.Stroke = SysOutlineBrush;
                     CynoBeaconLogo.StrokeThickness = 1.0;
                     CynoBeaconLogo.StrokeLineJoin = PenLineJoin.Round;
-                    CynoBeaconLogo.Fill = new SolidColorBrush(Colors.OrangeRed);
+                    var orangeRedBrush = new SolidColorBrush(Colors.OrangeRed);
+                    orangeRedBrush.Freeze();
+                    CynoBeaconLogo.Fill = orangeRedBrush;
 
                     Canvas.SetLeft(CynoBeaconLogo, mapSystem.Layout.X + 7);
                     Canvas.SetTop(CynoBeaconLogo, mapSystem.Layout.Y - 12);
@@ -3258,7 +3340,9 @@ namespace SMT
                 AllianceNameListStackPanel.Children.Clear();
 
                 Brush fontColour = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF767576"));
+                fontColour.Freeze();
                 Brush SelectedFont = new SolidColorBrush(Colors.White);
+                SelectedFont.Freeze();
 
                 List<Label> AllianceNameListLabels = new List<Label>();
 
@@ -3415,14 +3499,22 @@ namespace SMT
             if(HelpList.Visibility == Visibility.Hidden)
             {
                 HelpList.Visibility = Visibility.Visible;
-                helpIcon.Fill = new SolidColorBrush(Colors.Yellow);
-                HelpQM.Foreground = new SolidColorBrush(Colors.Black);
+                var yellowBrush = new SolidColorBrush(Colors.Yellow);
+                yellowBrush.Freeze();
+                helpIcon.Fill = yellowBrush;
+                var blackBrush = new SolidColorBrush(Colors.Black);
+                blackBrush.Freeze();
+                HelpQM.Foreground = blackBrush;
             }
             else
             {
                 HelpList.Visibility = Visibility.Hidden;
-                helpIcon.Fill = new SolidColorBrush(Colors.Black);
-                HelpQM.Foreground = new SolidColorBrush(Colors.White);
+                var blackBrush2 = new SolidColorBrush(Colors.Black);
+                blackBrush2.Freeze();
+                helpIcon.Fill = blackBrush2;
+                var whiteBrush = new SolidColorBrush(Colors.White);
+                whiteBrush.Freeze();
+                HelpQM.Foreground = whiteBrush;
             }
         }
 
@@ -3706,10 +3798,13 @@ namespace SMT
 
 
                 Brush fgBrush     = new SolidColorBrush(popupFg);
+                fgBrush.Freeze();
 
                 Brush mutedBrush  = new SolidColorBrush(popupMuted);
+                mutedBrush.Freeze();
 
                 Brush accentBrush = new SolidColorBrush(popupAccent);
+                accentBrush.Freeze();
 
 
 

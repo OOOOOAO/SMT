@@ -1,0 +1,151 @@
+{
+  "specName": "bookmark-route-planner",
+  "timestamp": "2026-08-21",
+  "status": "completed",
+  "capturedAtCommit": "d97a6c7",
+  "previewUrl": null,
+  "sourceIssue": null,
+  "redTeamStatus": "completed",
+  "coverageMap": {
+    "输入格式与解析": "done",
+    "目标函数": "done",
+    "移动模型": "done",
+    "分线语义": "done",
+    "疲劳模型": "done",
+    "起点终点": "done",
+    "输出与集成": "done",
+    "算法细节": "done",
+    "边界情况": "done",
+    "UI": "done"
+  },
+  "qaLog": [
+    {
+      "area": "输入格式与解析",
+      "question": "位标文本原始长什么样？",
+      "answer": "用户粘贴 68 行真实样本：游戏内「位置」窗口复制的 Tab 分隔 9 列（名称/类型/跳数/星系/星座/区域/创建时间/备注/创建者），全部位于 血脉(Branch) 区域"
+    },
+    {
+      "area": "目标函数",
+      "question": "全都过一遍路最短，还是限时尽量多过？倒计时要不要参与排序？",
+      "answer": "不需要倒计时；不用一次性跑完所有点；可以分成几条线，每条线里的点最大化；几个点之间可以用旗舰跳连接(6光年)"
+    },
+    {
+      "area": "移动模型",
+      "question": "点与点之间实际怎么走？",
+      "answer": "星门为主，6LY 内跳当捷径"
+    },
+    {
+      "area": "分线语义",
+      "question": "一条线到哪儿算断？谁决定分几条？",
+      "answer": "现在这些点只是例子实际会不一样，按照旗舰跳来切"
+    },
+    {
+      "area": "分线语义",
+      "question": "「按旗舰跳切」的具体含义？",
+      "answer": "算一条总路线，在跳处剪开"
+    },
+    {
+      "area": "疲劳模型",
+      "question": "疲劳公式和数值对不对得上？",
+      "answer": "先选『真算跳跃疲劳』，看到逐跳数值表（第4跳等4小时、第5跳等12小时）后改口：『算了，疲劳你不管就行』"
+    },
+    {
+      "area": "目标函数",
+      "question": "等冷却时间算不算进目标函数？",
+      "answer": "耗时不总要 不要"
+    },
+    {
+      "area": "移动模型",
+      "question": "旗舰跳相当于多少跳星门？",
+      "answer": "不用代价，做成可调，比如连续3个星系都没点那就用旗舰跳，这个值可调就行"
+    },
+    {
+      "area": "起点终点",
+      "question": "路线从哪里开始？要不要指定终点？",
+      "answer": "当前角色所在星系"
+    },
+    {
+      "area": "输出与集成",
+      "question": "算完了怎么给你？",
+      "answer": "游戏内导航要但需要加一个按钮来应用这个路径；面板里列表按线分组；地图上画线；推到游戏内航点"
+    },
+    {
+      "area": "算法细节",
+      "question": "两阶段流程（先纯星门 TSP，再把空跑段换成跳，最后在跳处切线）对吗？",
+      "answer": "对，两阶段"
+    },
+    {
+      "area": "边界情况",
+      "question": "异常情况怎么处理？",
+      "answer": "解析不出星系的行列出来；星门不可达又 >6LY 的点单独列出；同星系多位标合并但显示个数；支持避开星系列表"
+    },
+    {
+      "area": "UI",
+      "question": "界面放哪里？应用按钮一次推多少？",
+      "answer": "新面板，一次推全部"
+    },
+    {
+      "area": "输出与集成",
+      "question": "游戏内航点只认星门，全推会跨跳跃缺口规划绕路。确认？",
+      "answer": "改为『只推当前这条线』"
+    },
+    {
+      "area": "算法细节",
+      "question": "Branch 区仅 94 系、42 目标占 45%，K=3 触发率≈0。规则改成什么？",
+      "answer": "保留空系规则，K 改小到 2"
+    },
+    {
+      "area": "算法细节",
+      "question": "门距最优解最终代价比次优差 85%，还坚持两阶段吗？",
+      "answer": "改成一阶段混合矩阵"
+    },
+    {
+      "area": "算法细节",
+      "question": "跑这个路线的是什么船？星门段避不避高安？6.0LY 从哪来？",
+      "answer": "不会去高安，我们只会在 nullsec 做这个事"
+    },
+    {
+      "area": "输入格式与解析",
+      "question": "中文星系名必须能解析这个不存在吧，nullsec 星系名不都是字母+数字+- 吗？",
+      "answer": "用户质疑成立。实测确认后撤销 D3 的反查表要求，改为不做"
+    }
+  ],
+  "baseline": {
+    "derivedFrom": "codebase-analysis",
+    "capturedAtCommit": "d97a6c7",
+    "claims": [
+      { "area": "算法细节", "claim": "Navigation.Navigate(From,To,useJumpGates,useThera,useZarzakh,useTurnur,RoutingMode) 存在，返回 List<RoutePoint>", "evidence": "EVEData/Navigation.cs:294" },
+      { "area": "算法细节", "claim": "Navigate 在 CurrentNode==End 时提前 break，From==To 时返回空 List 而非 null", "evidence": "EVEData/Navigation.cs:339, :540" },
+      { "area": "算法细节", "claim": "NavigateCapitals 只走 JumpableSystems，每次调用全量重置 8437 节点，OpenList 上用 List 的 O(n) Min/First/Remove/Contains，回溯无环路上限", "evidence": "EVEData/Navigation.cs:597-700" },
+      { "area": "算法细节", "claim": "Navigation.MapNodes 是 static 可变字典，LastTouchedNodes 是无锁 static HashSet", "evidence": "EVEData/Navigation.cs:24, :30" },
+      { "area": "输入格式与解析", "claim": "EveManager.NameToSystem 用 StringComparer.OrdinalIgnoreCase，键全为英文名", "evidence": "EVEData/EveManager.cs:199" },
+      { "area": "输入格式与解析", "claim": "EveManager.Translations 是单向 EN→ZH，无反查表", "evidence": "EVEData/EveManager.cs:46, :209-231" },
+      { "area": "输入格式与解析", "claim": "data/Translation.csv 8609 行；按汉字过滤全宇宙 1998 条为真译名，其余为恒等映射代号或脏行；nullsec 6556 系中仅 42 个有汉字译名，Branch 94 系中为 0", "evidence": "实测 perl Han 字符集过滤 + mapSolarSystems.csv security<=0.0" },
+      { "area": "输入格式与解析", "claim": "8437 个星系名 vs 1174 个星座名交集为 0", "evidence": "实测 comm -12 on mapSolarSystems.csv col4 / mapConstellations.csv col3" },
+      { "area": "算法细节", "claim": "Branch 区 regionID=10000055，共 94 个星系", "evidence": "实测 mapRegions.csv / mapSolarSystems.csv" },
+      { "area": "输出与集成", "claim": "LocalCharacter ESI 推送用 SetAutopilotWaypointAsync(auth, firstRoute, false, SysID)，clearOtherWaypoints 恒为 false", "evidence": "EVEData/LocalCharacter.cs:933 对比 :807 的 (auth,true,true,s.ID)" },
+      { "area": "输出与集成", "claim": "ESI 签名为 Waypoint(destination_id, add_to_beginning, clear_other_waypoints)", "evidence": "External/ESI.NET/ESI.NET/Logic/UserInterfaceLogic.cs:67" },
+      { "area": "输出与集成", "claim": "推送循环用 Thread.Sleep(200) 而非 await Task.Delay，异常被 catch{} 吞掉", "evidence": "EVEData/LocalCharacter.cs:928-936" },
+      { "area": "输出与集成", "claim": "AddDestination 的 Waypoints.Add 在 lock(ActiveRouteLock) 之外", "evidence": "EVEData/LocalCharacter.cs:502-518" },
+      { "area": "UI", "claim": "MainWindow.xaml 已有 Route 面板 (ContentId=RouteContentID) 与 Jump Planner 面板，含航点列表/上移下移删除右键菜单/Avoid 列表", "evidence": "SMT/MainWindow.xaml:443, :576-607" },
+      { "area": "算法细节", "claim": "JumpRoute 默认 MaxLY=7.0, JDC=5，JDC!=5 时 actualMaxLY *= .9", "evidence": "EVEData/JumpRoute.cs:16-17, :34-38" }
+    ]
+  },
+  "driftLedger": [],
+  "feedbackRounds": [],
+  "redTeamFindings": [
+    { "severity": "critical", "title": "中文星系名全查不到", "resolution": "rejected-after-measurement", "decisionId": "D3", "note": "红队论证针对帝国区，但本功能只在 nullsec 用。实测 nullsec 6556 系中仅 42 个有汉字译名（多为 Pochven），Branch 94 系中为 0。且解析失败已是可见失败。红队原始计数 2055 亦虚高，含 GME-PQ,ME-PQ 这类脏行，按汉字过滤为 1998" },
+    { "severity": "critical", "title": "K=3 规则在 Branch 区触发率≈0", "resolution": "accepted", "decisionId": "D11" },
+    { "severity": "critical", "title": "跳跃规则三处歧义（端点/穿越/子段）", "resolution": "accepted-by-D13", "decisionId": "D13" },
+    { "severity": "critical", "title": "Navigate(X,X) 与不可达均返回空 List，Count-1 = -1", "resolution": "accepted", "decisionId": "D14" },
+    { "severity": "critical", "title": "clearOtherWaypoints 写死 false，逐线推送不隔离", "resolution": "accepted", "decisionId": "D20" },
+    { "severity": "critical", "title": "两阶段目标函数不一致，反例差 85%", "resolution": "accepted", "decisionId": "D13" },
+    { "severity": "critical", "title": "Navigation 静态单例数据竞争 + NavigateCapitals 回溯无环路上限", "resolution": "accepted", "decisionId": "D23" },
+    { "severity": "major", "title": "903 次 Dijkstra 冗余 + 虫洞系全图抽干 + UI 线程阻塞", "resolution": "accepted", "decisionId": "D14" },
+    { "severity": "major", "title": "NavigateCapitals 单次 10^8~10^9 次比较", "resolution": "accepted", "decisionId": "D17" },
+    { "severity": "major", "title": "第 0 列自由文本可劫持解析", "resolution": "accepted", "decisionId": "D2" },
+    { "severity": "major", "title": "旗舰进不了高安但 Shortest 会穿；6.0LY 与 MaxLY/JDC 冲突", "resolution": "partially-accepted", "decisionId": "D15, D16", "note": "高安已硬排除；射程刻意不与 JumpRoute 耦合，全 App 存在两套数值，记为未决" },
+    { "severity": "major", "title": "复用 Waypoints/ActiveRoute 会覆盖 Route 面板并被后台重算", "resolution": "accepted", "decisionId": "D21" },
+    { "severity": "minor", "title": "推送吞异常 / 绕开限流统计 / 阻塞 Sleep", "resolution": "accepted", "decisionId": "D22" }
+  ]
+}

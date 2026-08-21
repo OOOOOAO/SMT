@@ -2183,7 +2183,7 @@ namespace SMT
                         // Offset runs 0 -> -dashCycle, which marches the dashes from (X1,Y1) toward (X2,Y2) --
                         // the direction of travel, which is the whole point : a still image of this route is an
                         // unreadable tangle. Duration scales with the cycle so both leg types flow at the same
-                        // speed. Same treatment AddIntelTrailsOverlay gives the selected enemy's trail.
+                        // speed.
                         DoubleAnimation flow = new DoubleAnimation
                         {
                             From = 0,

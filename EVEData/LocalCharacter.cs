@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Xml.Serialization;
 using EVEStandard.Models;
 using EVEStandard.Models.API;
@@ -509,9 +510,9 @@ namespace SMT.EVEData
                     ActiveRoute.Clear();
                     ActiveRouteLength = 0;
                 }
-            }
 
-            Waypoints.Add(EveManager.Instance.SystemIDToName[systemID]);
+                Waypoints.Add(EveManager.Instance.SystemIDToName[systemID]);
+            }
 
             routeNeedsUpdate = true;
             esiRouteNeedsUpdate = true;
@@ -712,7 +713,12 @@ namespace SMT.EVEData
                 if (routeNeedsUpdate)
                 {
                     routeNeedsUpdate = false;
-                    UpdateActiveRoute();
+
+                    // fire and forget, but observe faults : this was async void, where an exception
+                    // on the background thread had no handler and would take the process down
+                    _ = UpdateActiveRoute().ContinueWith(
+                            t => Debug.WriteLine($"UpdateActiveRoute failed: {t.Exception}"),
+                            TaskContinuationOptions.OnlyOnFaulted);
 
                     if (RouteUpdatedEvent != null)
                     {
@@ -789,7 +795,7 @@ namespace SMT.EVEData
         /// <summary>
         /// Update the active route for the character
         /// </summary>
-        private async void UpdateActiveRoute()
+        private async Task UpdateActiveRoute()
         {
             if (esiSendRouteClear)
             {
@@ -930,11 +936,13 @@ namespace SMT.EVEData
                     {
                         try
                         {
-                            await EveManager.Instance.EveApiClient.UserInterface.SetAutopilotWaypointAsync(auth, firstRoute, false, SysID);
+                            // (auth, addToBeginning, clearOtherWaypoints, destinationId) : the first
+                            // waypoint replaces the in-game route, the rest append to it
+                            await EveManager.Instance.EveApiClient.UserInterface.SetAutopilotWaypointAsync(auth, false, firstRoute, SysID);
                         }
                         catch { }
                         firstRoute = false;
-                        Thread.Sleep(200);
+                        await Task.Delay(200);
                     }
                 }
 

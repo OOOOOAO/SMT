@@ -134,6 +134,17 @@
     <s:String x:Key="Main_Panel_Characters">角色列表</s:String>
     <s:String x:Key="Main_Panel_Route">导航路线</s:String>
     <s:String x:Key="Main_Panel_JumpPlanner">旗舰跳跃规划</s:String>
+    <s:String x:Key="Main_BM_GrpInput">粘贴位标</s:String>
+    <s:String x:Key="Main_BM_LblK">空系阈值 K</s:String>
+    <s:String x:Key="Main_BM_LblJ">跳跃门槛 J（星门绕路 &gt; J 跳才跳）</s:String>
+    <s:String x:Key="Main_BM_LblMaxLY">旗舰跳射程 (光年)</s:String>
+    <s:String x:Key="Main_BM_ChkAvoidHighSec">避开高安</s:String>
+    <s:String x:Key="Main_BM_BtnCalculate">计算路线</s:String>
+    <s:String x:Key="Main_BM_GrpUnreachable">不可达</s:String>
+    <s:String x:Key="Main_BM_GrpIsolated">孤点（已放弃）</s:String>
+    <s:String x:Key="Main_BM_ChkDropIsolated">丢弃孤点，半径</s:String>
+    <s:String x:Key="Main_BM_LblKeepBm">…但位标数 ≥ 此值时保留</s:String>
+    <s:String x:Key="Main_BM_GrpUnparsed">无法解析</s:String>
     <s:String x:Key="Main_Panel_WH">虫洞连接</s:String>
     <s:String x:Key="Main_Panel_Storms">金属星际风暴</s:String>
     <s:String x:Key="Main_Panel_SOV">主权战役</s:String>

@@ -858,6 +858,8 @@ namespace SMT
             if(MapConf.DrawRoute)
             {
                 AddRouteToMap();
+
+            AddBookmarkRouteToMap();
             }
 
             AddWHLinksSystemsToMap();
@@ -2080,6 +2082,164 @@ namespace SMT
                 catch
                 {
                 }
+            }
+        }
+
+
+        /// <summary>Planned route from the bookmark route planner, independent of ActiveRoute.</summary>
+        public EVEData.BookmarkRoute BookmarkRoute { get; set; }
+
+        /// <summary>Character location at the time BookmarkRoute was calculated; used only to draw the jump-from-start edge.</summary>
+        public string BookmarkRouteStartSystem { get; set; }
+
+
+        /// Draws the bookmark route planner's planned route : gate legs solid, capital jump legs
+        /// dashed with an LY label. Independent of ActiveRoute/AddRouteToMap by design -- this is its
+        /// own overlay, driven by <see cref="BookmarkRoute"/>.
+        ///
+        /// Known limitation : RegionControl only ever shows one region. When an edge's two endpoints aren't
+        /// both on the currently displayed map (very often true of a capital jump leg, which by definition
+        /// spans a gap the gate network doesn't bridge, sometimes into a different region), it's drawn as a
+        /// stub + label pointing off the edge of the map toward the far system, the same treatment
+        /// AddSystemsToMap already gives a jump bridge that leaves the region. An edge with both endpoints off
+        /// the map is skipped entirely, same as AddRouteToMap does for ActiveRoute above. UniverseControl draws
+        /// the same route in full, with no such gap, since it isn't limited to one region.
+        /// </summary>
+        private void AddBookmarkRouteToMap()
+        {
+            if(BookmarkRoute == null)
+            {
+                return;
+            }
+
+            Brush GateLegBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SelectedSystemColour);
+            Brush JumpLegBrush = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+
+            // Both leg types are dashed, so the flow animation below can show which way to travel. The gate
+            // dashes are fine enough that the leg still reads as near-solid ; jump legs stay distinct by their
+            // colour and LY label. Frozen because every leg shares the same two collections.
+            DoubleCollection jumpDashes = new DoubleCollection { 4.0, 3.0 };
+            DoubleCollection gateDashes = new DoubleCollection { 1.0, 1.0 };
+            jumpDashes.Freeze();
+            gateDashes.Freeze();
+
+            try
+            {
+                foreach(EVEData.BookmarkRouteMapHelper.Edge edge in EVEData.BookmarkRouteMapHelper.EnumerateEdges(BookmarkRoute, BookmarkRouteStartSystem))
+                {
+                    bool fromOnMap = Region.IsSystemOnMap(edge.From);
+                    bool toOnMap = Region.IsSystemOnMap(edge.To);
+
+                    if(!fromOnMap && !toOnMap)
+                    {
+                        continue;
+                    }
+
+                    Brush legBrush = edge.IsJump ? JumpLegBrush : GateLegBrush;
+                    Point fromPt, toPt;
+                    string offMapLabel = null;
+
+                    if(fromOnMap && toOnMap)
+                    {
+                        EVEData.MapSystem fromSys = Region.MapSystems[edge.From];
+                        EVEData.MapSystem toSys = Region.MapSystems[edge.To];
+                        fromPt = new Point(fromSys.Layout.X, fromSys.Layout.Y);
+                        toPt = new Point(toSys.Layout.X, toSys.Layout.Y);
+                    }
+                    else
+                    {
+                        // one end is off the current region : anchor on the on-map system and draw a short
+                        // stub toward the edge of the map, same treatment as an out-of-region jump bridge.
+                        string onMapName = fromOnMap ? edge.From : edge.To;
+                        string offMapName = fromOnMap ? edge.To : edge.From;
+                        EVEData.MapSystem onMapSys = Region.MapSystems[onMapName];
+                        EVEData.System offMapSys = EM.GetEveSystem(offMapName);
+
+                        fromPt = new Point(onMapSys.Layout.X, onMapSys.Layout.Y);
+
+                        // ponytail: same fixed offset AddSystemsToMap uses for an out-of-region jump bridge stub,
+                        // so a system with both could overlap the two labels. Jitter/stack them if that shows up in testing.
+                        toPt = new Point(onMapSys.Layout.X - 20, onMapSys.Layout.Y - 40);
+
+                        offMapLabel = offMapSys != null ? $"{offMapSys.LocalizedName}\n({offMapSys.Region})" : offMapName;
+                    }
+
+                    Line routeLine = new Line
+                    {
+                        X1 = fromPt.X,
+                        Y1 = fromPt.Y,
+                        X2 = toPt.X,
+                        Y2 = toPt.Y,
+                        StrokeThickness = 3,
+                        Stroke = legBrush,
+                        Visibility = Visibility.Visible,
+                    };
+
+                    double dashCycle = edge.IsJump ? 7.0 : 2.0;
+                    routeLine.StrokeDashArray = edge.IsJump ? jumpDashes : gateDashes;
+
+                    if(!MapConf.DisableRoutePathAnimation)
+                    {
+                        // Offset runs 0 -> -dashCycle, which marches the dashes from (X1,Y1) toward (X2,Y2) --
+                        // the direction of travel, which is the whole point : a still image of this route is an
+                        // unreadable tangle. Duration scales with the cycle so both leg types flow at the same
+                        // speed. Same treatment AddIntelTrailsOverlay gives the selected enemy's trail.
+                        DoubleAnimation flow = new DoubleAnimation
+                        {
+                            From = 0,
+                            To = -dashCycle,
+                            Duration = new Duration(TimeSpan.FromSeconds(dashCycle / 6.0)),
+                            RepeatBehavior = RepeatBehavior.Forever,
+                        };
+                        Timeline.SetDesiredFrameRate(flow, 20);
+                        routeLine.BeginAnimation(Shape.StrokeDashOffsetProperty, flow);
+                    }
+
+                    Canvas.SetZIndex(routeLine, SYSTEM_LINK_INDEX);
+                    MainCanvas.Children.Add(routeLine);
+                    DynamicMapElements.Add(routeLine);
+
+                    if(offMapLabel != null)
+                    {
+                        Shape offMapBlob = new Ellipse { Height = 6, Width = 6, Stroke = legBrush, Fill = legBrush };
+                        Canvas.SetLeft(offMapBlob, toPt.X - 3);
+                        Canvas.SetTop(offMapBlob, toPt.Y - 3);
+                        Canvas.SetZIndex(offMapBlob, SYSTEM_LINK_INDEX);
+                        MainCanvas.Children.Add(offMapBlob);
+                        DynamicMapElements.Add(offMapBlob);
+
+                        string text = edge.IsJump ? $"{offMapLabel}\n{edge.LY:0.##} LY" : offMapLabel;
+                        Label offMapText = new Label { Content = text, Foreground = legBrush, IsHitTestVisible = false };
+                        if(MapConf.ActiveColourScheme.SystemSubTextSize > 2)
+                        {
+                            offMapText.FontSize = MapConf.ActiveColourScheme.SystemSubTextSize;
+                        }
+
+                        Canvas.SetLeft(offMapText, toPt.X - 20);
+                        Canvas.SetTop(offMapText, toPt.Y - 20);
+                        Canvas.SetZIndex(offMapText, ZINDEX_SYSTEM);
+                        MainCanvas.Children.Add(offMapText);
+                        DynamicMapElements.Add(offMapText);
+                    }
+                    else if(edge.IsJump)
+                    {
+                        Label lyLabel = new Label { Content = $"{edge.LY:0.##} LY", Foreground = legBrush, IsHitTestVisible = false };
+                        if(MapConf.ActiveColourScheme.SystemSubTextSize > 2)
+                        {
+                            lyLabel.FontSize = MapConf.ActiveColourScheme.SystemSubTextSize;
+                        }
+
+                        Canvas.SetLeft(lyLabel, (fromPt.X + toPt.X) / 2);
+                        Canvas.SetTop(lyLabel, (fromPt.Y + toPt.Y) / 2);
+                        Canvas.SetZIndex(lyLabel, ZINDEX_SYSTEM);
+                        MainCanvas.Children.Add(lyLabel);
+                        DynamicMapElements.Add(lyLabel);
+                    }
+                }
+            }
+            catch
+            {
+                // best-effort overlay, mirrors AddRouteToMap above : a bad/renamed system shouldn't take the whole redraw down.
             }
         }
 

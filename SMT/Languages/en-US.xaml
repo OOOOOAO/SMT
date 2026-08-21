@@ -134,6 +134,17 @@
     <s:String x:Key="Main_Panel_Characters">Characters</s:String>
     <s:String x:Key="Main_Panel_Route">Route</s:String>
     <s:String x:Key="Main_Panel_JumpPlanner">Jump Planner</s:String>
+    <s:String x:Key="Main_BM_GrpInput">Paste Bookmarks</s:String>
+    <s:String x:Key="Main_BM_LblK">Empty-run threshold K</s:String>
+    <s:String x:Key="Main_BM_LblJ">Jump threshold J (gate detour &gt; J)</s:String>
+    <s:String x:Key="Main_BM_LblMaxLY">Jump range (LY)</s:String>
+    <s:String x:Key="Main_BM_ChkAvoidHighSec">Avoid High Sec</s:String>
+    <s:String x:Key="Main_BM_BtnCalculate">Calculate Route</s:String>
+    <s:String x:Key="Main_BM_GrpUnreachable">Unreachable</s:String>
+    <s:String x:Key="Main_BM_GrpIsolated">Isolated</s:String>
+    <s:String x:Key="Main_BM_ChkDropIsolated">Drop isolated targets, radius</s:String>
+    <s:String x:Key="Main_BM_LblKeepBm">…but keep if bookmarks ≥</s:String>
+    <s:String x:Key="Main_BM_GrpUnparsed">Unparsed</s:String>
     <s:String x:Key="Main_Panel_WH">WH Connections</s:String>
     <s:String x:Key="Main_Panel_Storms">Storms</s:String>
     <s:String x:Key="Main_Panel_SOV">SOV Campaigns</s:String>

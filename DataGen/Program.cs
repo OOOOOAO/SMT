@@ -8,6 +8,14 @@ namespace DataGen
 
         private static async Task Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "selfcheck")
+            {
+                bool ok = BookmarkRouteSelfCheck.Run();
+                ok &= BookmarkRouteMapHelper.SelfCheck();
+                Environment.Exit(ok ? 0 : 1);
+                return;
+            }
+
             // Data Creation
             Console.WriteLine("Creating SMT Data");
             DataGenOptions options = DataGenOptions.Parse(args);

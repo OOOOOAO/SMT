@@ -63,7 +63,7 @@ namespace SMT
 
         private System.Windows.Forms.NotifyIcon nIcon = new System.Windows.Forms.NotifyIcon();
 
-        private readonly string WindowLayoutVersion = "03";
+        private readonly string WindowLayoutVersion = "04";
 
         private IWavePlayer waveOutEvent;
         private AudioFileReader audioFileReader;
@@ -391,6 +391,7 @@ namespace SMT
             RouteSystemDropDownAC.ItemsSource = globalSystemList;
             JumpRouteSystemDropDownAC.ItemsSource = globalSystemList;
             JumpRouteAvoidSystemDropDownAC.ItemsSource = globalSystemList;
+            InitBookmarkRoutePanel(globalSystemList);
 
             MapConf.PropertyChanged += MapConf_PropertyChanged;
 

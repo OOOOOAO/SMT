@@ -263,6 +263,12 @@ namespace SMT
             }
         }
 
+        /// <summary>Planned route from the bookmark route planner, independent of CapitalRoute.</summary>
+        public EVEData.BookmarkRoute BookmarkRoute { get; set; }
+
+        /// <summary>Character location at the time BookmarkRoute was calculated; used only to draw the jump-from-start edge.</summary>
+        public string BookmarkRouteStartSystem { get; set; }
+
         public EVEData.LocalCharacter ActiveCharacter { get; set; }
 
         public void UpdateActiveCharacter(EVEData.LocalCharacter lc)
@@ -1297,6 +1303,65 @@ namespace SMT
                     drawingContext.Close();
 
                     VHRoute.AddChild(routeVisual, "ActiveRoute");
+                }
+                // Bookmark route planner's planned route, independent of CapitalRoute.
+                // Drawn here rather than in AddSystemsToMap's FullRedraw block because BookmarkRoute changes on
+                // every recalculation, not just on a full map redraw. Unlike RegionControl this view isn't
+                // limited to one region, so mixed gate+jump routes -- including cross-region capital jump legs --
+                // draw in full with no off-map gap to work around.
+                if(BookmarkRoute != null)
+                {
+                    Brush bmGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SelectedSystemColour);
+                    bmGateBrush.Freeze();
+                    Brush bmJumpBrush = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+                    bmJumpBrush.Freeze();
+
+                    Pen bmGatePen = new Pen(bmGateBrush, 1.2);
+                    bmGatePen.Freeze();
+                    Pen bmJumpPen = new Pen(bmJumpBrush, 1.2) { DashStyle = DashStyles.Dot };
+                    bmJumpPen.Freeze();
+
+                    System.Windows.Media.DrawingVisual bookmarkRouteVisual = new System.Windows.Media.DrawingVisual();
+                    DrawingContext bookmarkDc = bookmarkRouteVisual.RenderOpen();
+                    CultureInfo bmCi = CultureInfo.GetCultureInfo("en-us");
+
+                    foreach(EVEData.BookmarkRouteMapHelper.Edge edge in EVEData.BookmarkRouteMapHelper.EnumerateEdges(BookmarkRoute, BookmarkRouteStartSystem))
+                    {
+                        EVEData.System sysA = EM.GetEveSystem(edge.From);
+                        EVEData.System sysB = EM.GetEveSystem(edge.To);
+
+                        if(sysA == null || sysB == null)
+                        {
+                            continue;
+                        }
+
+                        Pen legPen = edge.IsJump ? bmJumpPen : bmGatePen;
+                        Brush legBrush = edge.IsJump ? bmJumpBrush : bmGateBrush;
+
+                        Point p1 = new Point(sysA.UniverseX, sysA.UniverseY);
+                        Point p2 = new Point(sysB.UniverseX, sysB.UniverseY);
+
+                        bookmarkDc.DrawLine(legPen, p1, p2);
+                        bookmarkDc.DrawEllipse(legBrush, legPen, p2, 3, 3);
+
+                        if(edge.IsJump)
+                        {
+                            FormattedText lyText = new FormattedText(
+                                $"{edge.LY:0.##} LY",
+                                bmCi,
+                                FlowDirection.LeftToRight,
+                                MainTF,
+                                6,
+                                legBrush,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                            Point mid = new Point((p1.X + p2.X) / 2, (p1.Y + p2.Y) / 2);
+                            bookmarkDc.DrawText(lyText, mid);
+                        }
+                    }
+
+                    bookmarkDc.Close();
+                    VHRoute.AddChild(bookmarkRouteVisual, "BookmarkRoute");
                 }
             }
         }

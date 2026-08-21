@@ -674,6 +674,71 @@
                                 </Grid>
                             </xcadl:LayoutAnchorable>
 
+                            <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_Bookmark}" CanClose="False" CanAutoHide="True" CanHide="False" ContentId="BookmarkRouteContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
+                                <Grid x:Name="MainBookmarkRouteGrid">
+                                    <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
+                                        <StackPanel>
+                                            <GroupBox Header="{DynamicResource Main_BM_GrpInput}">
+                                                <StackPanel Margin="4">
+                                                    <TextBox x:Name="bookmarkInputTextBox" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap" Height="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="2" />
+                                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                                        <Label Content="{DynamicResource Main_BM_LblK}" />
+                                                        <Slider x:Name="bookmarkKSlider" Minimum="1" Maximum="5" Value="2" Width="90" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="BookmarkRuleSlider_ValueChanged" VerticalAlignment="Center" />
+                                                        <Label x:Name="bookmarkKValueLbl" Content="2" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                                        <Label Content="{DynamicResource Main_BM_LblJ}" />
+                                                        <Slider x:Name="bookmarkJSlider" Minimum="1" Maximum="25" Value="10" Width="90" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="BookmarkRuleSlider_ValueChanged" VerticalAlignment="Center" />
+                                                        <Label x:Name="bookmarkJValueLbl" Content="10" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                                        <CheckBox x:Name="bookmarkDropIsolatedChk" Content="{DynamicResource Main_BM_ChkDropIsolated}" IsChecked="True" VerticalAlignment="Center" Click="BookmarkDropIsolatedChk_Click" />
+                                                        <Slider x:Name="bookmarkIsoSlider" Minimum="1" Maximum="15" Value="5" Width="70" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="BookmarkRuleSlider_ValueChanged" VerticalAlignment="Center" Margin="4,0,0,0" />
+                                                        <Label x:Name="bookmarkIsoValueLbl" Content="5" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="18,2,2,2">
+                                                        <Label Content="{DynamicResource Main_BM_LblKeepBm}" />
+                                                        <Slider x:Name="bookmarkKeepBmSlider" Minimum="2" Maximum="10" Value="3" Width="70" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="BookmarkRuleSlider_ValueChanged" VerticalAlignment="Center" />
+                                                        <Label x:Name="bookmarkKeepBmValueLbl" Content="3" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                                        <Label Content="{DynamicResource Main_BM_LblMaxLY}" />
+                                                        <TextBox x:Name="bookmarkMaxLYTextBox" Text="6.0" Width="50" />
+                                                    </StackPanel>
+                                                    <CheckBox x:Name="bookmarkAvoidHighSecChk" Content="{DynamicResource Main_BM_ChkAvoidHighSec}" IsChecked="True" Margin="2" />
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <GroupBox Header="{DynamicResource Main_JP_GrpAvoid}">
+                                                <StackPanel Margin="4">
+                                                    <ListBox x:Name="bookmarkAvoidLB" MinHeight="40" Margin="2" />
+                                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                                        <dotNetKitControls:AutoCompleteComboBox x:Name="BookmarkAvoidSystemDropDownAC" TextSearch.TextPath="LocalizedName" FontSize="12" Width="156" />
+                                                        <Button x:Name="AddBookmarkAvoidSystemsBtn" Click="AddBookmarkAvoidSystemsBtn_Click" Content="{DynamicResource Main_JP_BtnAddAvoid}" Margin="2" />
+                                                    </StackPanel>
+                                                    <Button x:Name="ClearBookmarkAvoidSystemsBtn" Click="ClearBookmarkAvoidSystemsBtn_Click" Content="{DynamicResource Main_JP_BtnClearAvoid}" Margin="2" />
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <Button x:Name="CalculateBookmarkRouteBtn" Click="CalculateBookmarkRouteBtn_Click" Content="{DynamicResource Main_BM_BtnCalculate}" Margin="2" />
+                                            <Label x:Name="bookmarkRouteStatusLbl" Content="" Margin="2" />
+
+                                            <StackPanel x:Name="bookmarkLinesPanel" Margin="2" />
+
+                                            <GroupBox x:Name="bookmarkUnreachableGroupBox" Header="{DynamicResource Main_BM_GrpUnreachable}">
+                                                <TextBlock x:Name="bookmarkUnreachableText" TextWrapping="Wrap" Margin="4" />
+                                            </GroupBox>
+                                            <GroupBox x:Name="bookmarkIsolatedGroupBox" Header="{DynamicResource Main_BM_GrpIsolated}">
+                                                <TextBlock x:Name="bookmarkIsolatedText" TextWrapping="Wrap" Margin="4" />
+                                            </GroupBox>
+                                            <GroupBox x:Name="bookmarkUnparsedGroupBox" Header="{DynamicResource Main_BM_GrpUnparsed}">
+                                                <TextBlock x:Name="bookmarkUnparsedText" TextWrapping="Wrap" Margin="4" />
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Grid>
+                            </xcadl:LayoutAnchorable>
+
                             <xcadl:LayoutAnchorable Title="{DynamicResource Main_Panel_WH}" CanClose="False" CanAutoHide="True" CanHide="false" ContentId="TheraContentID" AutoHideMinHeight="200" AutoHideMinWidth="280">
                                 <TabControl>
                                     <TabItem Header="{DynamicResource Main_WH_TabThera}">

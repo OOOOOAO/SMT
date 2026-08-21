@@ -8,6 +8,14 @@ namespace DataGen
 
         private static void Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "selfcheck")
+            {
+                bool ok = BookmarkRouteSelfCheck.Run();
+                ok &= BookmarkRouteMapHelper.SelfCheck(); // map-drawing edge stitching, see EVEData/BookmarkRouteMapHelper.cs
+                Environment.Exit(ok ? 0 : 1);
+                return;
+            }
+
             // Data Creation
             Console.WriteLine("Creating SMT Data");
 

@@ -509,9 +509,9 @@ namespace SMT.EVEData
                     ActiveRoute.Clear();
                     ActiveRouteLength = 0;
                 }
-            }
 
-            Waypoints.Add(EveManager.Instance.SystemIDToName[systemID]);
+                Waypoints.Add(EveManager.Instance.SystemIDToName[systemID]);
+            }
 
             routeNeedsUpdate = true;
             esiRouteNeedsUpdate = true;
@@ -941,7 +941,9 @@ namespace SMT.EVEData
                         {
                             try
                             {
-                                await EveManager.Instance.EveApiClient.UserInterface.SetAutopilotWaypointAsync(auth, firstRoute, false, SysID);
+                                // (auth, addToBeginning, clearOtherWaypoints, destinationId) : the first
+                                // waypoint replaces the in-game route, the rest append to it
+                                await EveManager.Instance.EveApiClient.UserInterface.SetAutopilotWaypointAsync(auth, false, firstRoute, SysID);
                             }
                             catch(Exception exception)
                             {

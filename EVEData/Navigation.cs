@@ -676,6 +676,12 @@ namespace SMT.EVEData
                 {
                     Route.Add(CurrentNode.Name);
                     CurrentNode = CurrentNode.NearestToStart;
+
+                    if (Route.Count > 2000)
+                    {
+                        // parent chain looped : bail rather than spin forever building a list
+                        return null;
+                    }
                 }
             }
 

@@ -40,8 +40,12 @@ namespace SMT.EVEData
             {
                 m_numPlayers = value;
                 OnPropertyChanged("NumPlayers");
+                OnPropertyChanged("IsOnline");
             }
         }
+
+        /// <summary>True when TQ reports at least one player online (server is up).</summary>
+        public bool IsOnline => m_numPlayers > 0;
 
         public DateTime ServerTime
         {

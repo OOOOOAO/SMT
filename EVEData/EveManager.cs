@@ -76,12 +76,12 @@ namespace SMT.EVEData
         private Dictionary<string, int> intelFileReadPos;
 
         /// <summary>
-        /// Read position map for the intel files
+        /// Read position map for the game log files
         /// </summary>
         private Dictionary<string, int> gameFileReadPos;
 
         /// <summary>
-        /// Read position map for the intel files
+        /// Maps game log file paths to the character name that owns each log
         /// </summary>
         private Dictionary<string, string> gamelogFileCharacterMap;
 
@@ -202,7 +202,7 @@ namespace SMT.EVEData
 
             CharacterIDToName = new SerializableDictionary<long, string>();
             IDToAlliance = new SerializableDictionary<long, Alliance>();
-            NameToSystem = new Dictionary<string, System>();
+            NameToSystem = new Dictionary<string, System>(StringComparer.OrdinalIgnoreCase);
             IDToSystem = new Dictionary<long, System>();
 
             ServerInfo = new EVEData.Server();
@@ -688,6 +688,12 @@ namespace SMT.EVEData
         /// Gets or sets the ShipTypes ID to Name dictionary
         /// </summary>
         public SerializableDictionary<string, string> ShipTypes { get; set; }
+
+        /// <summary>
+        /// DEMO: tracks per-enemy movement across systems based on intel chat.
+        /// Currently populated heuristically from IntelData (see IntelTrailTracker).
+        /// </summary>
+        public IntelTrailTracker IntelTrails { get; private set; } = new IntelTrailTracker();
 
         /// <summary>
         /// Gets or sets the System ID to Name dictionary
@@ -2168,7 +2174,7 @@ namespace SMT.EVEData
         }
 
         /// <summary>
-        /// Hand the custom smtauth- url we get back from the logon screen
+        /// Handle the custom smtauth- callback URL (PKCE token exchange + character link).
         /// </summary>
         public async Task HandleEveAuthSMTUriAsync(Uri uri, string challengeCode)
         {
@@ -3436,6 +3442,36 @@ namespace SMT.EVEData
         {
             ZKillFeed = new ZKillRedisQ();
             ZKillFeed.Initialise();
+
+            // P0: auto-clear intel trails when an enemy appears as victim on ZKill
+            ZKillFeed.KillsAddedEvent += ZKillFeed_ClearDeadTrails;
+        }
+
+        /// <summary>
+        /// When a kill comes in, resolve the victim name and remove their intel trail.
+        /// Best-effort: failures are silently swallowed so ZKill polling is never disrupted.
+        /// </summary>
+        private void ZKillFeed_ClearDeadTrails()
+        {
+            try
+            {
+                if(IntelTrails == null || ZKillFeed?.KillStream == null) return;
+
+                foreach(var kill in ZKillFeed.KillStream)
+                {
+                    if(kill.VictimCharacterID == 0) continue;
+
+                    string name = GetCharacterName(kill.VictimCharacterID);
+                    if(!string.IsNullOrEmpty(name))
+                    {
+                        IntelTrails.RemoveTrail(name);
+                    }
+                }
+            }
+            catch
+            {
+                // best-effort: never crash the ZKill pipeline
+            }
         }
 
         /// <summary>
@@ -3648,16 +3684,34 @@ namespace SMT.EVEData
                                         }
                                     }
 
-                                    foreach(System sys in Systems)
+                                    // Fast path: exact match via dictionary (O(1) instead of O(n))
+                                    if(NameToSystem.ContainsKey(s))
                                     {
-                                        if(sys.Name.IndexOf(s, StringComparison.OrdinalIgnoreCase) == 0 || s.IndexOf(sys.Name, StringComparison.OrdinalIgnoreCase) == 0)
+                                        id.Systems.Add(s);
+                                    }
+                                    else
+                                    {
+                                        // Slow path: prefix matching for partial system names
+                                        foreach(System sys in Systems)
                                         {
-                                            id.Systems.Add(sys.Name);
+                                            if(sys.Name.IndexOf(s, StringComparison.OrdinalIgnoreCase) == 0 || s.IndexOf(sys.Name, StringComparison.OrdinalIgnoreCase) == 0)
+                                            {
+                                                id.Systems.Add(sys.Name);
+                                            }
                                         }
                                     }
                                 }
 
                                 IntelDataList.Enqueue(id);
+
+                                // DEMO: feed enemy-movement tracker. Ship-type set is
+                                // used by the heuristic to reject ship tokens when
+                                // guessing the enemy name.
+                                try
+                                {
+                                    IntelTrails?.Ingest(id, ShipTypes?.Values);
+                                }
+                                catch { /* trail tracking is best-effort */ }
 
                                 if(IntelUpdatedEvent != null)
                                 {

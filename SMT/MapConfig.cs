@@ -79,6 +79,8 @@ namespace SMT
 
         private int m_ZkillExpireTimeMinutes;
 
+        private int m_IntelTrailLifetimeMinutes = 10;
+
         private bool m_drawRoute = true;
 
         private bool m_followOnZoom = false;
@@ -1240,44 +1242,62 @@ namespace SMT
 
         public bool UseESIForCharacterPositions { get; set; }
 
+        [Category("Intel")]
+        [DisplayName("Trail Lifetime (min) / 航迹存活时间(分钟)")]
+        public int IntelTrailLifetimeMinutes
+        {
+            get => m_IntelTrailLifetimeMinutes;
+            set
+            {
+                m_IntelTrailLifetimeMinutes = value < 1 ? 1 : value;
+                OnPropertyChanged("IntelTrailLifetimeMinutes");
+            }
+        }
+
         public void SetDefaultColours()
         {
+            // Space Dark map palette — aligned with Styles.xaml Phase 1 color system.
+            // Environment/neutral colors use the Space Dark stack (#010409 / #0d1117 / #161b22 / #21262d / #30363d / #444c56 / #6e7681 / #8b949e / #e6edf3).
+            // Accent uses Space Blue (#1f6feb / #58a6ff / #79c0ff). Region/cross-region gates use violet (#8b5cf6) for semantic distinction.
+            // Semantic gameplay colors (Intel red/orange, JumpRange orange, Thera yellow-green, Thurnur orange-red, etc.) are preserved.
             MapColours defaultColours = new MapColours
             {
                 Name = "Default",
                 UserEditable = false,
                 FriendlyJumpBridgeColour = Colors.Goldenrod,
                 DisabledJumpBridgeColour = Color.FromRgb(205, 55, 50),
-                SystemOutlineColour = Color.FromRgb(0, 0, 0),
-                InRegionSystemColour = Colors.SlateGray,
-                InRegionSystemTextColour = Colors.BlanchedAlmond,
-                OutRegionSystemColour = (Color)ColorConverter.ConvertFromString("#FF272B2F"),
-                OutRegionSystemTextColour = (Color)ColorConverter.ConvertFromString("#FF7E8184"),
+                SystemOutlineColour = (Color)ColorConverter.ConvertFromString("#FF010409"),       // outline = deepest layer
+                InRegionSystemColour = (Color)ColorConverter.ConvertFromString("#FF30363D"),       // neutral mid-gray
+                InRegionSystemTextColour = (Color)ColorConverter.ConvertFromString("#FFE6EDF3"),   // foreground white
+                OutRegionSystemColour = (Color)ColorConverter.ConvertFromString("#FF161B22"),      // panel layer
+                OutRegionSystemTextColour = (Color)ColorConverter.ConvertFromString("#FF6E7681"),  // muted text
 
-                UniverseSystemColour = Colors.SlateGray,
-                UniverseConstellationGateColour = Colors.SlateGray,
-                UniverseSystemTextColour = Colors.BlanchedAlmond,
-                UniverseGateColour = Colors.DarkSlateBlue,
-                UniverseRegionGateColour = Color.FromRgb(128, 64, 64),
-                UniverseMapBackgroundColour = Color.FromRgb(43, 43, 48),
+                UniverseSystemColour = (Color)ColorConverter.ConvertFromString("#FF30363D"),
+                UniverseConstellationGateColour = (Color)ColorConverter.ConvertFromString("#FF444C56"),
+                UniverseSystemTextColour = (Color)ColorConverter.ConvertFromString("#FFE6EDF3"),
+                UniverseGateColour = (Color)ColorConverter.ConvertFromString("#FF30363D"),
+                UniverseRegionGateColour = (Color)ColorConverter.ConvertFromString("#FF8B5CF6"),   // violet = cross-region
+                UniverseMapBackgroundColour = (Color)ColorConverter.ConvertFromString("#FF010409"), // deepest bg for universe view
 
-                PopupText = Color.FromRgb(0, 0, 0),
-                PopupBackground = (Color)ColorConverter.ConvertFromString("#FF959595"),
+                PopupText = (Color)ColorConverter.ConvertFromString("#FFE6EDF3"),
+                PopupBackground = (Color)ColorConverter.ConvertFromString("#FF161B22"),
 
-                MapBackgroundColour = Color.FromRgb(43, 43, 48),
-                RegionMarkerTextColour = Color.FromRgb(49, 49, 53),
-                RegionMarkerTextColourFull = Color.FromRgb(0, 0, 0),
+                MapBackgroundColour = (Color)ColorConverter.ConvertFromString("#FF0D1117"),        // matches main window bg
+                RegionMarkerTextColour = (Color)ColorConverter.ConvertFromString("#FF21262D"),     // subtle when zoomed in
+                RegionMarkerTextColourFull = (Color)ColorConverter.ConvertFromString("#FF30363D"), // visible when zoomed out, still subdued
                 ESIOverlayColour = (Color)ColorConverter.ConvertFromString("#FF74B071"),
 
                 IntelOverlayColour = Color.FromRgb(178, 34, 34),
                 IntelClearOverlayColour = Colors.Orange,
+                IntelTrailColour = Color.FromRgb(0, 255, 255),                                    // Cyan — distinct from red intel pulse
+                IntelTrailSelectedColour = Color.FromArgb(255, 88, 166, 255),                      // #58a6ff accent blue
 
-                NormalGateColour = Colors.DarkSlateBlue,
-                ConstellationGateColour = Colors.SlateGray,
-                RegionGateColour = Color.FromRgb(128, 64, 64),
-                SelectedSystemColour = Color.FromRgb(255, 255, 255),
-                CharacterHighlightColour = Color.FromRgb(170, 130, 180),
-                CharacterOfflineTextColour = Colors.DarkGray,
+                NormalGateColour = (Color)ColorConverter.ConvertFromString("#FF30363D"),           // neutral connection line
+                ConstellationGateColour = (Color)ColorConverter.ConvertFromString("#FF444C56"),    // one step brighter
+                RegionGateColour = (Color)ColorConverter.ConvertFromString("#FF8B5CF6"),           // violet = cross-region
+                SelectedSystemColour = (Color)ColorConverter.ConvertFromString("#FF58A6FF"),       // accent blue
+                CharacterHighlightColour = (Color)ColorConverter.ConvertFromString("#FF79C0FF"),   // accent light
+                CharacterOfflineTextColour = (Color)ColorConverter.ConvertFromString("#FF6E7681"),
                 CharacterTextColour = Color.FromRgb(240, 190, 10),
                 CharacterTextSize = 11,
                 SystemTextSize = 12,
@@ -1359,7 +1379,7 @@ namespace SMT
             ToolBox_ShowJumpBridges = true;
             ToolBox_ShowSovOwner = true;
 
-            
+            IntelTrailLifetimeMinutes = 10;
 
         }
 

@@ -143,6 +143,11 @@ namespace SMT
                 EVEManager.ZKillFeed.PauseUpdate = !MapConf.ShowZKillData;
             }
 
+            if(e.PropertyName == "IntelTrailLifetimeMinutes")
+            {
+                EVEManager.IntelTrails.TrailLifetime = TimeSpan.FromMinutes(MapConf.IntelTrailLifetimeMinutes);
+            }
+
             RegionUC.ReDrawMap(true);
 
             if(e.PropertyName == "ShowRegionStandings")

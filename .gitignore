@@ -361,3 +361,20 @@ MigrationBackup/
 FodyWeavers.xsd
 
 *.p7s
+.alma-snapshots
+
+# Local notes & IDE
+
+memory-bank/
+
+memory-bank_*/
+
+memory-bank.md
+
+.idea/
+
+# Dev/test scripts kept local-only
+
+tools/
+
+nul

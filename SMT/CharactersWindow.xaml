@@ -10,7 +10,7 @@
         mc:Ignorable="d"
         Closed="Window_Closed"
         Loaded="Window_Loaded"
-        Title="{DynamicResource CharWin_Title}" Height="450" Width="750" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+        Title="{DynamicResource CharWin_Title}" Height="480" Width="750" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
 
     <Window.Resources>
         <ObjectDataProvider x:Key="navigationEnumData" MethodName="GetValues" ObjectType="{x:Type System:Enum}">
@@ -48,22 +48,22 @@
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="125" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
-                <RowDefinition Height="25" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Image Source="{Binding PortraitLocation}" Width="120" Height="120" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Margin="10" />
             <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" Margin="-40,30" Grid.RowSpan="2">
-                <TextBlock Text="{Binding Name}" FontSize="24" Foreground="White" />
+                <TextBlock Text="{Binding Name}" FontSize="24" Foreground="{StaticResource ForegroundBrush}" />
 
                 <TextBlock FontSize="14" Foreground="LightGray">
                                     <Run Text="{Binding CorporationName, FallbackValue='????'}" />
@@ -132,17 +132,17 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="{DynamicResource CharWin_DangerGrp}"  Grid.Column="1" Grid.Row="1" Grid.RowSpan="4" BorderBrush="DarkGray" Margin="5">
+            <GroupBox Header="{DynamicResource CharWin_DangerGrp}"  Grid.Column="1" Grid.Row="1" Grid.RowSpan="5" BorderBrush="DarkGray" Margin="5">
                 <StackPanel Margin="4">
                     <CheckBox IsChecked="{Binding DangerZoneActive}" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Checked="dangerZoneEnabled_Checked" Content="{DynamicResource CharWin_DangerEn}" Margin="4" />
                     <StackPanel Orientation="Horizontal" Margin="4">
-                        <xctk:IntegerUpDown Value="{Binding DangerZoneRange}" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0" Width="45" Minimum="1" Maximum="6" Background="Transparent"  Foreground="White" ValueChanged="dangerzone_ValueChanged" />
+                        <xctk:IntegerUpDown Value="{Binding DangerZoneRange}" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0" Width="45" Minimum="1" Maximum="6" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" ValueChanged="dangerzone_ValueChanged" />
                         <Label Content="{DynamicResource CharWin_DangerSize}" Grid.Column="0" Grid.Row="5" HorizontalAlignment="Right" />
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="{DynamicResource CharWin_NotifGrp}" Grid.Column="1" Grid.Row="5" Grid.RowSpan="6" BorderBrush="DarkGray" Margin="5">
+            <GroupBox Header="{DynamicResource CharWin_NotifGrp}" Grid.Column="1" Grid.Row="6" Grid.RowSpan="5" BorderBrush="DarkGray" Margin="5">
                 <StackPanel Margin="4">
                     <CheckBox IsChecked="{Binding ObservatoryDecloakWarningEnabled}" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Content="{DynamicResource CharWin_ObsDec}" Margin="4" />
                     <CheckBox IsChecked="{Binding GateDecloakWarningEnabled}" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Content="{DynamicResource CharWin_GateDec}" Margin="4" />
@@ -151,10 +151,10 @@
                 </StackPanel>
             </GroupBox>
 
-            <StackPanel Grid.Column="1" Grid.Row="11" Orientation="Horizontal"  HorizontalAlignment="Right">
-                <Button Content="↓" Width="20" VerticalAlignment="Center"  Margin="4,0" x:Name="moveDownBtn" Click="MoveDownBtn_OnClick" />
-                <Button Content="↑" Width="20" VerticalAlignment="Center"  Margin="4,0" x:Name="moveUpBtn" Click="MoveUpBtn_OnClick" />
-                <Button Content="{DynamicResource CharWin_BtnDel}" Width="100" VerticalAlignment="Center"   Margin="20,0" x:Name="deleteBtn" Click="deleteBtn_Click" />
+            <StackPanel Grid.Column="1" Grid.Row="11" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,4">
+                <Button Content="↓" Width="26" Height="26" VerticalAlignment="Center" Margin="4,0" x:Name="moveDownBtn" Click="MoveDownBtn_OnClick" />
+                <Button Content="↑" Width="26" Height="26" VerticalAlignment="Center" Margin="4,0" x:Name="moveUpBtn" Click="MoveUpBtn_OnClick" />
+                <Button Content="{DynamicResource CharWin_BtnDel}" Width="100" Height="26" VerticalAlignment="Center" Margin="20,0,4,0" x:Name="deleteBtn" Click="deleteBtn_Click" />
             </StackPanel>
         </Grid>
     </Grid>

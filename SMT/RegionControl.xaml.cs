@@ -22,6 +22,13 @@ namespace SMT
     /// </summary>
     public partial class RegionControl : UserControl, INotifyPropertyChanged
     {
+        private static SolidColorBrush FrozenBrush(Color c)
+        {
+            var b = new SolidColorBrush(c);
+            b.Freeze();
+            return b;
+        }
+
         public static readonly RoutedEvent UniverseSystemSelectEvent = EventManager.RegisterRoutedEvent("UniverseSystemSelect", RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(UniverseControl));
         private const int SYSTEM_LINK_INDEX = 19;
         private const double SYSTEM_REGION_TEXT_WIDTH = 100;
@@ -61,7 +68,7 @@ namespace SMT
 
         private const int THERA_Z_INDEX = 22;
 
-        private readonly Brush SelectedAllianceBrush = new SolidColorBrush(Color.FromArgb(180, 200, 200, 200));
+        private readonly Brush SelectedAllianceBrush = FrozenBrush(Color.FromArgb(180, 200, 200, 200));
         private Dictionary<string, EVEData.EveManager.JumpShip> activeJumpSpheres;
         private string currentCharacterJumpSystem;
         private string currentJumpCharacter;
@@ -102,13 +109,13 @@ namespace SMT
         private Dictionary<string, List<KeyValuePair<int, string>>> NameTrackingLocationMap = new Dictionary<string, List<KeyValuePair<int, string>>>();
         private long SelectedAlliance;
         private bool showJumpDistance;
-        private Brush StandingBadBrush = new SolidColorBrush(Color.FromArgb(110, 196, 72, 6));
-        private Brush StandingGoodBrush = new SolidColorBrush(Color.FromArgb(110, 43, 101, 196));
-        private Brush StandingNeutBrush = new SolidColorBrush(Color.FromArgb(110, 140, 140, 140));
+        private Brush StandingBadBrush = FrozenBrush(Color.FromArgb(110, 196, 72, 6));
+        private Brush StandingGoodBrush = FrozenBrush(Color.FromArgb(110, 43, 101, 196));
+        private Brush StandingNeutBrush = FrozenBrush(Color.FromArgb(110, 140, 140, 140));
 
         // Constant Colours
-        private Brush StandingVBadBrush = new SolidColorBrush(Color.FromArgb(110, 148, 5, 5));
-        private Brush StandingVGoodBrush = new SolidColorBrush(Color.FromArgb(110, 5, 34, 120));
+        private Brush StandingVBadBrush = FrozenBrush(Color.FromArgb(110, 148, 5, 5));
+        private Brush StandingVGoodBrush = FrozenBrush(Color.FromArgb(110, 5, 34, 120));
 
         /// <summary>Standing tier colours for map tickers: same semantic tiers as the kill feed, higher luminance for dark map backgrounds.</summary>
         private static readonly SolidColorBrush TickerStandingTerribleBrush;
@@ -277,87 +284,37 @@ namespace SMT
 
         public bool ShowNPCKills
         {
-            get
-            {
-                return m_ShowNPCKills;
-            }
-
-            set
-            {
-                m_ShowNPCKills = value;
-
-                if(m_ShowNPCKills)
-                {
-                    ShowPodKills = false;
-                    ShowShipKills = false;
-                    ShowShipJumps = false;
-                }
-
-                OnPropertyChanged("ShowNPCKills");
-            }
+            get { return m_ShowNPCKills; }
+            set { m_ShowNPCKills = value; if(value) ClearOtherStatOverlays(nameof(ShowNPCKills)); OnPropertyChanged(nameof(ShowNPCKills)); }
         }
 
         public bool ShowPodKills
         {
-            get
-            {
-                return m_ShowPodKills;
-            }
-
-            set
-            {
-                m_ShowPodKills = value;
-                if(m_ShowPodKills)
-                {
-                    ShowNPCKills = false;
-                    ShowShipKills = false;
-                    ShowShipJumps = false;
-                }
-
-                OnPropertyChanged("ShowPodKills");
-            }
+            get { return m_ShowPodKills; }
+            set { m_ShowPodKills = value; if(value) ClearOtherStatOverlays(nameof(ShowPodKills)); OnPropertyChanged(nameof(ShowPodKills)); }
         }
 
         public bool ShowShipJumps
         {
-            get
-            {
-                return m_ShowShipJumps;
-            }
-
-            set
-            {
-                m_ShowShipJumps = value;
-                if(m_ShowShipJumps)
-                {
-                    ShowNPCKills = false;
-                    ShowPodKills = false;
-                    ShowShipKills = false;
-                }
-
-                OnPropertyChanged("ShowShipJumps");
-            }
+            get { return m_ShowShipJumps; }
+            set { m_ShowShipJumps = value; if(value) ClearOtherStatOverlays(nameof(ShowShipJumps)); OnPropertyChanged(nameof(ShowShipJumps)); }
         }
 
         public bool ShowShipKills
         {
-            get
-            {
-                return m_ShowShipKills;
-            }
+            get { return m_ShowShipKills; }
+            set { m_ShowShipKills = value; if(value) ClearOtherStatOverlays(nameof(ShowShipKills)); OnPropertyChanged(nameof(ShowShipKills)); }
+        }
 
-            set
-            {
-                m_ShowShipKills = value;
-                if(m_ShowShipKills)
-                {
-                    ShowNPCKills = false;
-                    ShowPodKills = false;
-                    ShowShipJumps = false;
-                }
-
-                OnPropertyChanged("ShowShipKills");
-            }
+        /// <summary>
+        /// Mutual exclusion for stat overlay toggles — when one is turned on, the others are turned off.
+        /// </summary>
+        private void ClearOtherStatOverlays(string except)
+        {
+            if(except != nameof(ShowNPCKills))  { m_ShowNPCKills = false;  OnPropertyChanged(nameof(ShowNPCKills)); }
+            if(except != nameof(ShowPodKills))  { m_ShowPodKills = false;  OnPropertyChanged(nameof(ShowPodKills)); }
+            if(except != nameof(ShowShipJumps)) { m_ShowShipJumps = false; OnPropertyChanged(nameof(ShowShipJumps)); }
+            if(except != nameof(ShowShipKills)) { m_ShowShipKills = false; OnPropertyChanged(nameof(ShowShipKills)); }
         }
 
         public bool ShowSovOwner
@@ -444,6 +401,7 @@ namespace SMT
             }
 
             Brush ActiveSovFightBrush = new SolidColorBrush(Colors.DarkRed);
+            ActiveSovFightBrush.Freeze();
 
             foreach(SOVCampaign sc in EM.ActiveSovCampaigns)
             {
@@ -490,65 +448,44 @@ namespace SMT
         public void AddWHLinksSystemsToMap()
         {
             Brush TheraWHLinkBrush = new SolidColorBrush(MapConf.ActiveColourScheme.TheraEntranceSystem);
+            TheraWHLinkBrush.Freeze();
             Brush TurnurWHLinkBrush = new SolidColorBrush(MapConf.ActiveColourScheme.ThurnurEntranceSystem);
+            TurnurWHLinkBrush.Freeze();
 
-            List<TheraConnection> currentTheraConnections = EM.TheraConnections.ToList();
+            AddWHConnectionOverlays(EM.TheraConnections.ToList().Select(tc => tc.System), TheraWHLinkBrush, ZINDEX_THERA);
+            AddWHConnectionOverlays(EM.TurnurConnections.ToList().Select(tc => tc.System), TurnurWHLinkBrush, ZINDEX_TURNER);
+        }
 
-            foreach(TheraConnection tc in currentTheraConnections)
+        /// <summary>
+        /// Renders wormhole connection overlays for the given systems (shared by Thera and Turnur).
+        /// </summary>
+        private void AddWHConnectionOverlays(IEnumerable<string> systemNames, Brush brush, int zIndex)
+        {
+            foreach(string systemName in systemNames)
             {
-                if(Region.IsSystemOnMap(tc.System))
+                if(Region.IsSystemOnMap(systemName))
                 {
-                    MapSystem ms = Region.MapSystems[tc.System];
+                    MapSystem ms = Region.MapSystems[systemName];
 
-                    Shape TheraShape;
+                    Shape shape;
                     if(ms.ActualSystem.HasNPCStation)
                     {
-                        TheraShape = new Rectangle() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
+                        shape = new Rectangle() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
                     }
                     else
                     {
-                        TheraShape = new Ellipse() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
+                        shape = new Ellipse() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
                     }
 
-                    TheraShape.Stroke = TheraWHLinkBrush;
-                    TheraShape.StrokeThickness = 1.5;
-                    TheraShape.StrokeLineJoin = PenLineJoin.Round;
-                    TheraShape.Fill = TheraWHLinkBrush;
+                    shape.Stroke = brush;
+                    shape.StrokeThickness = 1.5;
+                    shape.StrokeLineJoin = PenLineJoin.Round;
+                    shape.Fill = brush;
 
-                    Canvas.SetLeft(TheraShape, ms.Layout.X - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetTop(TheraShape, ms.Layout.Y - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetZIndex(TheraShape, ZINDEX_THERA);
-                    MainCanvas.Children.Add(TheraShape);
-                }
-            }
-
-            List<TurnurConnection> currentTurnurConnections = EM.TurnurConnections.ToList();
-
-            foreach(TurnurConnection tc in currentTurnurConnections)
-            {
-                if(Region.IsSystemOnMap(tc.System))
-                {
-                    MapSystem ms = Region.MapSystems[tc.System];
-
-                    Shape TurnurShape;
-                    if(ms.ActualSystem.HasNPCStation)
-                    {
-                        TurnurShape = new Rectangle() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
-                    }
-                    else
-                    {
-                        TurnurShape = new Ellipse() { Height = SYSTEM_SHAPE_SIZE + 6, Width = SYSTEM_SHAPE_SIZE + 6 };
-                    }
-
-                    TurnurShape.Stroke = TurnurWHLinkBrush;
-                    TurnurShape.StrokeThickness = 1.5;
-                    TurnurShape.StrokeLineJoin = PenLineJoin.Round;
-                    TurnurShape.Fill = TurnurWHLinkBrush;
-
-                    Canvas.SetLeft(TurnurShape, ms.Layout.X - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetTop(TurnurShape, ms.Layout.Y - (SYSTEM_SHAPE_OFFSET + 3));
-                    Canvas.SetZIndex(TurnurShape, ZINDEX_TURNER);
-                    MainCanvas.Children.Add(TurnurShape);
+                    Canvas.SetLeft(shape, ms.Layout.X - (SYSTEM_SHAPE_OFFSET + 3));
+                    Canvas.SetTop(shape, ms.Layout.Y - (SYSTEM_SHAPE_OFFSET + 3));
+                    Canvas.SetZIndex(shape, zIndex);
+                    MainCanvas.Children.Add(shape);
                 }
             }
         }
@@ -556,6 +493,7 @@ namespace SMT
         public void AddPOIsToMap()
         {
             Brush POIBrush = new SolidColorBrush(Colors.White);
+            POIBrush.Freeze();
 
             foreach(POI p in EM.PointsOfInterest)
             {
@@ -701,13 +639,17 @@ namespace SMT
             }
 
             Brush trigBrush = new SolidColorBrush(Colors.DarkRed);
+            trigBrush.Freeze();
             Brush trigOutlineBrush = new SolidColorBrush(Colors.Black);
+            trigOutlineBrush.Freeze();
             Brush trigSecStatusChangeBrush = new SolidColorBrush(Colors.Orange);
+            trigSecStatusChangeBrush.Freeze();
 
             ImageBrush ib = new ImageBrush();
             ib.TileMode = TileMode.Tile;
             ib.Stretch = Stretch.None;
             ib.ImageSource = trigLogoImage;
+            ib.Freeze();
 
             foreach(KeyValuePair<string, EVEData.MapSystem> kvp in Region.MapSystems)
             {
@@ -853,6 +795,7 @@ namespace SMT
             AddCharactersToMap();
             AddDataToMap();
             AddSystemIntelOverlay();
+            AddIntelTrailsOverlay();
             AddHighlightToSystem(SelectedSystem);
 
             if(MapConf.DrawRoute)
@@ -958,6 +901,17 @@ namespace SMT
                     SelectedSystem = kvp.Value.Name;
                     AddHighlightToSystem(name);
 
+                    // Intel trail focus: clicking any system that lies on an active
+                    // enemy trail selects that trail (the most recently-sighted one
+                    // wins if multiple enemies have passed through). Clicking a
+                    // system that no trail visits clears the selection. The next
+                    // ReDrawMap will redraw the trail in its flowing/active style.
+                    if(EM != null && EM.IntelTrails != null)
+                    {
+                        var hits = EM.IntelTrails.EnemiesAtSystem(kvp.Value.Name);
+                        EM.IntelTrails.SelectedEnemyId = hits.Count > 0 ? hits[0] : null;
+                    }
+
                     break;
                 }
             }
@@ -1029,7 +983,7 @@ namespace SMT
             // 3 = warning
             NameTrackingLocationMap.Clear();
 
-            foreach(EVEData.LocalCharacter c in EM.LocalCharacters)
+            foreach(EVEData.LocalCharacter c in EM.GetLocalCharactersCopy())
             {
                 // ignore characters out of this Map..
                 if(!Region.IsSystemOnMap(c.Location))
@@ -1132,9 +1086,13 @@ namespace SMT
                 double textXOffset = 6;
 
                 SolidColorBrush fleetMemberText = new SolidColorBrush(MapConf.ActiveColourScheme.FleetMemberTextColour);
+                fleetMemberText.Freeze();
                 SolidColorBrush localCharacterText = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterTextColour);
+                localCharacterText.Freeze();
                 SolidColorBrush localCharacterOfflineText = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterOfflineTextColour);
+                localCharacterOfflineText.Freeze();
                 SolidColorBrush characterTextOutline = new SolidColorBrush(Colors.Black);
+                characterTextOutline.Freeze();
 
                 if(MapConf.ShowCompactCharactersOnMap)
                 {
@@ -1235,7 +1193,9 @@ namespace SMT
 
                 Shape highlightSystemCircle = new Ellipse() { Height = circleSize, Width = circleSize };
 
-                highlightSystemCircle.Stroke = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterHighlightColour);
+                var charHighlightBrush = new SolidColorBrush(MapConf.ActiveColourScheme.CharacterHighlightColour);
+                charHighlightBrush.Freeze();
+                highlightSystemCircle.Stroke = charHighlightBrush;
                 highlightSystemCircle.StrokeThickness = 3;
 
                 RotateTransform rt = new RotateTransform();
@@ -1294,7 +1254,9 @@ namespace SMT
                 {
                     EVEData.MapSystem mss = Region.MapSystems[s];
                     Shape WarninghighlightSystemCircle = new Ellipse() { Height = warningCircleSize, Width = warningCircleSize };
-                    WarninghighlightSystemCircle.Stroke = new SolidColorBrush(Colors.IndianRed);
+                    var warningBrush = new SolidColorBrush(Colors.IndianRed);
+                    warningBrush.Freeze();
+                    WarninghighlightSystemCircle.Stroke = warningBrush;
                     WarninghighlightSystemCircle.StrokeThickness = 3;
 
                     Canvas.SetLeft(WarninghighlightSystemCircle, mss.Layout.X - warningCircleSizeOffset);
@@ -1321,21 +1283,31 @@ namespace SMT
             DataLargeColorDelta.B = (byte)(DataLargeColorDelta.B * 0.4);
 
             SolidColorBrush dataColor = new SolidColorBrush(DataColor);
+            dataColor.Freeze();
             SolidColorBrush infoColour = dataColor;
 
             SolidColorBrush PositiveDeltaColor = new SolidColorBrush(Colors.Green);
+            PositiveDeltaColor.Freeze();
             SolidColorBrush NegativeDeltaColor = new SolidColorBrush(Colors.Red);
+            NegativeDeltaColor.Freeze();
 
             Brush JumpInRange = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+            JumpInRange.Freeze();
             Brush JumpInRangeMulti = new SolidColorBrush(Colors.Black);
+            JumpInRangeMulti.Freeze();
 
             SolidColorBrush infoColourDelta = new SolidColorBrush(DataLargeColorDelta);
+            infoColourDelta.Freeze();
 
             SolidColorBrush zkbColour = new SolidColorBrush(MapConf.ActiveColourScheme.ZKillDataOverlay);
+            zkbColour.Freeze();
 
             SolidColorBrush infoLargeColour = new SolidColorBrush(DataLargeColor);
+            infoLargeColour.Freeze();
             SolidColorBrush infoVulnerable = new SolidColorBrush(MapConf.ActiveColourScheme.SOVStructureVulnerableColour);
+            infoVulnerable.Freeze();
             SolidColorBrush infoVulnerableSoon = new SolidColorBrush(MapConf.ActiveColourScheme.SOVStructureVulnerableSoonColour);
+            infoVulnerableSoon.Freeze();
 
             // Group standing Voronoi cells by SOV alliance so adjacent same-alliance cells merge.
             Dictionary<int, List<List<Vector2>>> standingCellsByAlliance = null;
@@ -1366,7 +1338,9 @@ namespace SMT
                     l.Content = text;
                     l.FontSize = 14;
                     l.FontWeight = FontWeights.Bold;
-                    l.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                    var inRegionTextBrush = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                    inRegionTextBrush.Freeze();
+                    l.Foreground = inRegionTextBrush;
 
                     BridgeInfoStackPanel.Children.Add(l);
                 }
@@ -1380,7 +1354,9 @@ namespace SMT
                 l.Content = text;
                 l.FontSize = 14;
                 l.FontWeight = FontWeights.Bold;
-                l.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                var inRegionTextBrush2 = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+                inRegionTextBrush2.Freeze();
+                l.Foreground = inRegionTextBrush2;
 
                 BridgeInfoStackPanel.Children.Add(l);
             }
@@ -1736,6 +1712,7 @@ namespace SMT
 
             // Draw Infrastructure Upgrade indicators (green circles)
             Brush SysOutlineBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SystemOutlineColour);
+            SysOutlineBrush.Freeze();
             foreach(KeyValuePair<string, EVEData.MapSystem> kvp in Region.MapSystems)
             {
                 EVEData.MapSystem sys = kvp.Value;
@@ -1752,7 +1729,9 @@ namespace SMT
                     UpgradeIndicator.Stroke = SysOutlineBrush;
                     UpgradeIndicator.StrokeThickness = 1.0;
                     UpgradeIndicator.StrokeLineJoin = PenLineJoin.Round;
-                    UpgradeIndicator.Fill = new SolidColorBrush(Colors.LimeGreen);
+                    var limeGreenBrush = new SolidColorBrush(Colors.LimeGreen);
+                    limeGreenBrush.Freeze();
+                    UpgradeIndicator.Fill = limeGreenBrush;
 
                     Canvas.SetLeft(UpgradeIndicator, sys.Layout.X - 14);
                     Canvas.SetTop(UpgradeIndicator, sys.Layout.Y - 3);
@@ -1813,21 +1792,21 @@ namespace SMT
             return fill;
         }
 
-        private Brush Gallente_FL = new SolidColorBrush(Color.FromArgb(100, 73, 171, 104));
-        private Brush Gallente_CLO = new SolidColorBrush(Color.FromArgb(100, 36, 90, 52));
-        private Brush Gallente_RG = new SolidColorBrush(Color.FromArgb(100, 13, 35, 19));
+        private Brush Gallente_FL = FrozenBrush(Color.FromArgb(100, 73, 171, 104));
+        private Brush Gallente_CLO = FrozenBrush(Color.FromArgb(100, 36, 90, 52));
+        private Brush Gallente_RG = FrozenBrush(Color.FromArgb(100, 13, 35, 19));
 
-        private Brush Caldari_FL = new SolidColorBrush(Color.FromArgb(100, 14, 186, 207));
-        private Brush Caldari_CLO = new SolidColorBrush(Color.FromArgb(100, 0, 110, 129));
-        private Brush Caldari_RG = new SolidColorBrush(Color.FromArgb(100, 0, 36, 43));
+        private Brush Caldari_FL = FrozenBrush(Color.FromArgb(100, 14, 186, 207));
+        private Brush Caldari_CLO = FrozenBrush(Color.FromArgb(100, 0, 110, 129));
+        private Brush Caldari_RG = FrozenBrush(Color.FromArgb(100, 0, 36, 43));
 
-        private Brush Amarr_FL = new SolidColorBrush(Color.FromArgb(100, 216, 191, 25));
-        private Brush Amarr_CLO = new SolidColorBrush(Color.FromArgb(100, 138, 114, 14));
-        private Brush Amarr_RG = new SolidColorBrush(Color.FromArgb(100, 46, 36, 5));
+        private Brush Amarr_FL = FrozenBrush(Color.FromArgb(100, 216, 191, 25));
+        private Brush Amarr_CLO = FrozenBrush(Color.FromArgb(100, 138, 114, 14));
+        private Brush Amarr_RG = FrozenBrush(Color.FromArgb(100, 46, 36, 5));
 
-        private Brush Minmatar_FL = new SolidColorBrush(Color.FromArgb(100, 221, 74, 79));
-        private Brush Minmatar_CLO = new SolidColorBrush(Color.FromArgb(100, 140, 34, 41));
-        private Brush Minmatar_RG = new SolidColorBrush(Color.FromArgb(100, 54, 11, 14));
+        private Brush Minmatar_FL = FrozenBrush(Color.FromArgb(100, 221, 74, 79));
+        private Brush Minmatar_CLO = FrozenBrush(Color.FromArgb(100, 140, 34, 41));
+        private Brush Minmatar_RG = FrozenBrush(Color.FromArgb(100, 54, 11, 14));
 
         private Brush GetBrushForFWState(FactionWarfareSystemInfo.State state, int Owner)
         {
@@ -1886,8 +1865,11 @@ namespace SMT
             }
 
             Brush FWLineBrushA = new SolidColorBrush(Colors.Yellow);
+            FWLineBrushA.Freeze();
             Brush FWLineBrushB = new SolidColorBrush(Colors.Orange);
+            FWLineBrushB.Freeze();
             Brush FWLineBrushC = new SolidColorBrush(Colors.OrangeRed);
+            FWLineBrushC.Freeze();
 
             DoubleCollection dashes = new DoubleCollection();
             dashes.Add(1.0);
@@ -2041,47 +2023,91 @@ namespace SMT
             EVEData.MapSystem selectedSys = Region.MapSystems[name];
             if(selectedSys != null)
             {
-                double circleSize = 32;
-                double circleOffset = circleSize / 2;
+                double centerX = selectedSys.Layout.X;
+                double centerY = selectedSys.Layout.Y;
+                Color ringColor = MapConf.ActiveColourScheme.SelectedSystemColour;
 
-                // add circle for system
-                Shape highlightSystemCircle = new Ellipse() { Height = circleSize, Width = circleSize };
-                highlightSystemCircle.Stroke = new SolidColorBrush(MapConf.ActiveColourScheme.SelectedSystemColour);
+                int    ringCount  = 3;
+                double startSize  = 64.0;
+                double endSize    = 22.0;
+                double duration   = 1.4;
+                double stagger    = duration / ringCount;
 
-                highlightSystemCircle.StrokeThickness = 5;
+                var ringBrush = new SolidColorBrush(ringColor);
+                ringBrush.Freeze();
 
-                RotateTransform rt = new RotateTransform();
-                rt.CenterX = circleSize / 2;
-                rt.CenterY = circleSize / 2;
-                highlightSystemCircle.RenderTransform = rt;
-
-                DoubleCollection dashes = new DoubleCollection();
-                dashes.Add(0.71);
-                dashes.Add(0.71);
-
-                highlightSystemCircle.StrokeDashArray = dashes;
-
-                Canvas.SetLeft(highlightSystemCircle, selectedSys.Layout.X - circleOffset);
-                Canvas.SetTop(highlightSystemCircle, selectedSys.Layout.Y - circleOffset);
-                Canvas.SetZIndex(highlightSystemCircle, 19);
-
-                MainCanvas.Children.Add(highlightSystemCircle);
-                DynamicMapElements.Add(highlightSystemCircle);
-
-                DoubleAnimation da = new DoubleAnimation();
-                da.From = 0;
-                da.To = 360;
-                da.Duration = new Duration(TimeSpan.FromSeconds(6));
-                Timeline.SetDesiredFrameRate(da, 20);
-
-                try
+                for(int i = 0; i < ringCount; i++)
                 {
-                    RotateTransform eTransform = (RotateTransform)highlightSystemCircle.RenderTransform;
-                    eTransform.BeginAnimation(RotateTransform.AngleProperty, da);
+                    double delaySeconds = i * stagger;
+
+                    Ellipse ring = new Ellipse
+                    {
+                        Width             = startSize,
+                        Height            = startSize,
+                        Stroke            = ringBrush,
+                        StrokeThickness   = 2.0,
+                        Fill              = Brushes.Transparent,
+                        IsHitTestVisible  = false,
+                        Opacity           = 0.0,
+                    };
+
+                    ScaleTransform st = new ScaleTransform(1.0, 1.0, startSize / 2, startSize / 2);
+                    ring.RenderTransform = st;
+
+                    Canvas.SetLeft(ring, centerX - startSize / 2);
+                    Canvas.SetTop(ring,  centerY - startSize / 2);
+                    Canvas.SetZIndex(ring, 19);
+                    MainCanvas.Children.Add(ring);
+                    DynamicMapElements.Add(ring);
+
+                    double endScale = endSize / startSize;
+                    DoubleAnimation scaleXAnim = new DoubleAnimation
+                    {
+                        From           = 1.0,
+                        To             = endScale,
+                        Duration       = new Duration(TimeSpan.FromSeconds(duration)),
+                        BeginTime      = TimeSpan.FromSeconds(delaySeconds),
+                        RepeatBehavior = RepeatBehavior.Forever,
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn },
+                    };
+                    DoubleAnimation scaleYAnim = scaleXAnim.Clone();
+                    Timeline.SetDesiredFrameRate(scaleXAnim, 30);
+                    Timeline.SetDesiredFrameRate(scaleYAnim, 30);
+
+                    DoubleAnimationUsingKeyFrames opacityAnim = new DoubleAnimationUsingKeyFrames
+                    {
+                        BeginTime      = TimeSpan.FromSeconds(delaySeconds),
+                        RepeatBehavior = RepeatBehavior.Forever,
+                        Duration       = new Duration(TimeSpan.FromSeconds(duration)),
+                    };
+                    opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0,  KeyTime.FromPercent(0.0)));
+                    opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.85, KeyTime.FromPercent(0.12)));
+                    opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0,  KeyTime.FromPercent(1.0)));
+                    Timeline.SetDesiredFrameRate(opacityAnim, 30);
+
+                    try
+                    {
+                        st.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+                        st.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+                        ring.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+                    }
+                    catch { }
                 }
-                catch
+
+                // small static dot to anchor the selection
+                Ellipse dot = new Ellipse
                 {
-                }
+                    Width            = 6,
+                    Height           = 6,
+                    Fill             = ringBrush,
+                    IsHitTestVisible = false,
+                    Opacity          = 0.8,
+                };
+                Canvas.SetLeft(dot, centerX - 3);
+                Canvas.SetTop(dot,  centerY - 3);
+                Canvas.SetZIndex(dot, 20);
+                MainCanvas.Children.Add(dot);
+                DynamicMapElements.Add(dot);
             }
         }
 
@@ -2249,7 +2275,9 @@ namespace SMT
                 return;
 
             Brush RouteBrush = new SolidColorBrush(Colors.Yellow);
+            RouteBrush.Freeze();
             Brush RouteAnsiblexBrush = new SolidColorBrush(Colors.DarkGray);
+            RouteAnsiblexBrush.Freeze();
 
             // no active route
             if(ActiveCharacter.ActiveRoute.Count == 0)
@@ -2328,46 +2356,363 @@ namespace SMT
         }
 
         private void AddSystemIntelOverlay()
+
         {
-            Brush intelBlobBrush = new SolidColorBrush(MapConf.ActiveColourScheme.IntelOverlayColour);
-            Brush intelClearBlobBrush = new SolidColorBrush(MapConf.ActiveColourScheme.IntelClearOverlayColour);
 
             //The tolist creates a temporary copy; however this is updated on a second thread
+
             foreach(EVEData.IntelData id in EM.IntelDataList.ToList())
+
             {
+
                 foreach(string sysStr in id.Systems)
+
                 {
+
                     if(Region.IsSystemOnMap(sysStr))
+
                     {
+
                         EVEData.MapSystem sys = Region.MapSystems[sysStr];
+
+
 
                         double radiusScale = (DateTime.Now - id.IntelTime).TotalSeconds / (double)MapConf.MaxIntelSeconds;
 
+
+
                         if(radiusScale < 0.0 || radiusScale >= 1.0)
+
                         {
+
                             continue;
+
                         }
 
-                        // add circle to the map
-                        double radius = 24 + (100 * (1.0 - radiusScale));
-                        double circleOffset = radius / 2;
 
-                        Shape intelShape = new Ellipse() { Height = radius, Width = radius };
-                        if(id.ClearNotification)
+
+                        // Age factor: 0.0 = fresh, 1.0 = about to expire
+
+                        double ageFactor = radiusScale; // 0..1
+
+
+
+                        // Colour: danger red for threat, muted green for clear
+
+                        Color baseColor = id.ClearNotification
+
+                            ? MapConf.ActiveColourScheme.IntelClearOverlayColour
+
+                            : MapConf.ActiveColourScheme.IntelOverlayColour;
+
+
+
+                        double centerX = sys.Layout.X;
+
+                        double centerY = sys.Layout.Y;
+
+
+
+                        // Number of pulse rings scales with freshness: 3 when fresh → 1 when old
+
+                        int ringCount = ageFactor < 0.33 ? 3 : (ageFactor < 0.66 ? 2 : 1);
+
+                        double startSize = 54.0;
+
+                        double endSize   = 13.0;
+
+                        // Duration slows down as intel ages (fresh = fast pulse, old = slow)
+
+                        double duration  = 1.0 + (ageFactor * 0.8);
+
+                        double stagger   = duration / 3.0;
+
+                        var intelRingBrush = new SolidColorBrush(baseColor);
+                        intelRingBrush.Freeze();
+
+                        for(int ri = 0; ri < ringCount; ri++)
+
                         {
-                            intelShape.Fill = intelClearBlobBrush;
+
+                            double delaySeconds = ri * stagger;
+
+
+
+                            Ellipse ring = new Ellipse
+
+                            {
+
+                                Width            = startSize,
+
+                                Height           = startSize,
+
+                                Stroke           = intelRingBrush,
+
+                                StrokeThickness  = id.ClearNotification ? 1.5 : 2.5,
+
+                                Fill             = Brushes.Transparent,
+
+                                IsHitTestVisible = false,
+
+                                Opacity          = 0.0,
+
+                            };
+
+
+
+                            ScaleTransform st = new ScaleTransform(1.0, 1.0, startSize / 2, startSize / 2);
+
+                            ring.RenderTransform = st;
+
+
+
+                            Canvas.SetLeft(ring, centerX - startSize / 2);
+
+                            Canvas.SetTop(ring,  centerY - startSize / 2);
+
+                            Canvas.SetZIndex(ring, 15);
+
+                            MainCanvas.Children.Add(ring);
+
+                            DynamicMapElements.Add(ring);
+
+
+
+                            double endScale = endSize / startSize;
+
+                            DoubleAnimation scaleXAnim = new DoubleAnimation
+
+                            {
+
+                                From           = 1.0,
+
+                                To             = endScale,
+
+                                Duration       = new Duration(TimeSpan.FromSeconds(duration)),
+
+                                BeginTime      = TimeSpan.FromSeconds(delaySeconds),
+
+                                RepeatBehavior = RepeatBehavior.Forever,
+
+                                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn },
+
+                            };
+
+                            DoubleAnimation scaleYAnim = scaleXAnim.Clone();
+
+                            Timeline.SetDesiredFrameRate(scaleXAnim, 30);
+
+                            Timeline.SetDesiredFrameRate(scaleYAnim, 30);
+
+
+
+                            // Max opacity fades with age: fresh=0.9, old=0.4
+
+                            double peakOpacity = 0.9 - (ageFactor * 0.5);
+
+                            DoubleAnimationUsingKeyFrames opacityAnim = new DoubleAnimationUsingKeyFrames
+
+                            {
+
+                                BeginTime      = TimeSpan.FromSeconds(delaySeconds),
+
+                                RepeatBehavior = RepeatBehavior.Forever,
+
+                                Duration       = new Duration(TimeSpan.FromSeconds(duration)),
+
+                            };
+
+                            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0,          KeyTime.FromPercent(0.0)));
+
+                            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(peakOpacity,  KeyTime.FromPercent(0.12)));
+
+                            opacityAnim.KeyFrames.Add(new LinearDoubleKeyFrame(0.0,          KeyTime.FromPercent(1.0)));
+
+                            Timeline.SetDesiredFrameRate(opacityAnim, 30);
+
+
+
+                            try
+
+                            {
+
+                                st.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+
+                                st.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+
+                                ring.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+
+                            }
+
+                            catch { }
+
                         }
-                        else
+
+
+
+                        // Static fill dot — fades out as intel ages
+
+                        double dotOpacity = Math.Max(0.15, 0.6 - ageFactor * 0.5);
+
+                        Color dotFill = baseColor;
+
+                        dotFill.A = (byte)(dotOpacity * 255);
+
+                        var dotFillBrush = new SolidColorBrush(dotFill);
+                        dotFillBrush.Freeze();
+
+                        Ellipse fillDot = new Ellipse
+
                         {
-                            intelShape.Fill = intelBlobBrush;
-                        }
 
-                        Canvas.SetLeft(intelShape, sys.Layout.X - circleOffset);
-                        Canvas.SetTop(intelShape, sys.Layout.Y - circleOffset);
-                        Canvas.SetZIndex(intelShape, 15);
-                        MainCanvas.Children.Add(intelShape);
+                            Width            = 14,
 
-                        DynamicMapElements.Add(intelShape);
+                            Height           = 14,
+
+                            Fill             = dotFillBrush,
+
+                            IsHitTestVisible = false,
+
+                        };
+
+                        Canvas.SetLeft(fillDot, centerX - 7);
+
+                        Canvas.SetTop(fillDot,  centerY - 7);
+
+                        Canvas.SetZIndex(fillDot, 14);
+
+                        MainCanvas.Children.Add(fillDot);
+
+                        DynamicMapElements.Add(fillDot);
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        /// <summary>
+        /// DEMO: Draw faint trails between systems where the same enemy id has
+        /// been reported by intel. Trails are connectionless polylines; each
+        /// segment fades out individually as it ages so the most recent moves
+        /// stand out and ancient sightings dissolve.
+        ///
+        /// Visual budget: max 1.5px stroke, peak opacity ~0.28. The trails sit
+        /// at ZIndex 13 — under the pulse rings (15) but above standard map
+        /// links so a hostile route is visible at a glance without stealing
+        /// attention from the active pulse.
+        /// </summary>
+        private void AddIntelTrailsOverlay()
+        {
+            if(EM == null || EM.IntelTrails == null) return;
+
+            var lifetime = EM.IntelTrails.TrailLifetime;
+            var now = DateTime.Now;
+            var trails = EM.IntelTrails.GetActiveTrails();
+            if(trails.Count == 0) return;
+
+            string selectedId = EM.IntelTrails.SelectedEnemyId;
+            // Trail colours come from the active theme; fall back to Cyan if scheme is missing.
+            Color intelColor = MapConf.ActiveColourScheme.IntelTrailColour;
+            Color intelSelectedColor = MapConf.ActiveColourScheme.IntelTrailSelectedColour;
+
+            // ---- visual budget ----
+            const double idleStroke    = 1.5;     // unselected: very subtle dashed thread
+            const double activeStroke  = 2.8;     // selected: bold and present
+            const double idleAlphaMax  = 0.22;    // unselected: barely there
+            const double activeAlpha   = 0.92;    // selected: fully visible
+            const double secondsPerSeg = 0.6;     // flow speed (a dash period crosses one segment)
+
+            foreach(var trail in trails)
+            {
+                bool isSelected = selectedId != null &&
+                                  string.Equals(selectedId, trail.EnemyId, StringComparison.OrdinalIgnoreCase);
+
+                for(int i = 1; i < trail.Points.Count; i++)
+                {
+                    var prev = trail.Points[i - 1];
+                    var curr = trail.Points[i];
+
+                    if(!Region.IsSystemOnMap(prev.SystemName)) continue;
+                    if(!Region.IsSystemOnMap(curr.SystemName)) continue;
+
+                    EVEData.MapSystem a = Region.MapSystems[prev.SystemName];
+                    EVEData.MapSystem b = Region.MapSystems[curr.SystemName];
+
+                    double ageSec = (now - curr.Time).TotalSeconds;
+                    double ageFactor = Math.Max(0.0, Math.Min(1.0, ageSec / lifetime.TotalSeconds));
+
+                    double opacity = isSelected
+                        ? activeAlpha                                  // selected: ignore age, stay bright
+                        : idleAlphaMax * (1.0 - ageFactor);            // idle: fade with age
+                    if(opacity < 0.02) continue;
+
+                    Color segColor = isSelected ? intelSelectedColor : intelColor;
+                    segColor.A = (byte)(opacity * 255);
+
+                    var segBrush = new SolidColorBrush(segColor);
+                    segBrush.Freeze();
+
+                    var line = new System.Windows.Shapes.Line
+                    {
+                        X1 = a.Layout.X,
+                        Y1 = a.Layout.Y,
+                        X2 = b.Layout.X,
+                        Y2 = b.Layout.Y,
+                        Stroke = segBrush,
+                        StrokeThickness = isSelected ? activeStroke : idleStroke,
+                        StrokeStartLineCap = PenLineCap.Round,
+                        StrokeEndLineCap = PenLineCap.Round,
+                        IsHitTestVisible = false,
+                        StrokeDashCap = PenLineCap.Round,
+                        StrokeDashArray = new DoubleCollection { 4, 3 },
+                    };
+
+                    if(isSelected)
+                    {
+                        // Flow! Animate StrokeDashOffset from 0 to -(dashCycle) over the
+                        // time it takes to cross one full segment. WPF normalises offset
+                        // by stroke thickness, hence the * thickness.
+                        const double dashCycle = 4.0 + 3.0;
+                        double dashEndOffset = -dashCycle;
+                        var flowAnim = new System.Windows.Media.Animation.DoubleAnimation
+                        {
+                            From = 0,
+                            To = dashEndOffset,
+                            Duration = TimeSpan.FromSeconds(secondsPerSeg),
+                            RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever,
+                        };
+                        System.Windows.Media.Animation.Timeline.SetDesiredFrameRate(flowAnim, 30);
+                        line.BeginAnimation(System.Windows.Shapes.Shape.StrokeDashOffsetProperty, flowAnim);
+                    }
+
+                    Canvas.SetZIndex(line, 13);
+                    MainCanvas.Children.Add(line);
+                    DynamicMapElements.Add(line);
+
+                    // Endpoint dot at the most recent sighting (the head of the trail).
+                    if(i == trail.Points.Count - 1)
+                    {
+                        double dotSize = isSelected ? 8.0 : 5.0;
+                        Color dotColor = isSelected ? intelSelectedColor : intelColor;
+                        double dotAlpha = isSelected ? activeAlpha : Math.Min(idleAlphaMax + 0.10, 0.4);
+                        dotColor.A = (byte)(dotAlpha * 255);
+                        var trailDotBrush = new SolidColorBrush(dotColor);
+                        trailDotBrush.Freeze();
+                        var dot = new Ellipse
+                        {
+                            Width = dotSize,
+                            Height = dotSize,
+                            Fill = trailDotBrush,
+                            IsHitTestVisible = false,
+                        };
+                        Canvas.SetLeft(dot, b.Layout.X - dotSize / 2.0);
+                        Canvas.SetTop(dot, b.Layout.Y - dotSize / 2.0);
+                        Canvas.SetZIndex(dot, 13);
+                        MainCanvas.Children.Add(dot);
+                        DynamicMapElements.Add(dot);
                     }
                 }
             }
@@ -2431,32 +2776,48 @@ namespace SMT
         {
             // brushes
             Brush SysOutlineBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SystemOutlineColour);
+            SysOutlineBrush.Freeze();
             Brush SysInRegionBrush = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemColour);
+            SysInRegionBrush.Freeze();
             Brush SysOutRegionBrush = new SolidColorBrush(MapConf.ActiveColourScheme.OutRegionSystemColour);
+            SysOutRegionBrush.Freeze();
 
             Brush SysInRegionDarkBrush = new SolidColorBrush(DarkenColour(MapConf.ActiveColourScheme.InRegionSystemColour));
+            SysInRegionDarkBrush.Freeze();
             Brush SysOutRegionDarkBrush = new SolidColorBrush(DarkenColour(MapConf.ActiveColourScheme.OutRegionSystemColour));
+            SysOutRegionDarkBrush.Freeze();
 
             Brush HasIceBrush = new SolidColorBrush(Colors.LightBlue);
+            HasIceBrush.Freeze();
 
             Brush SysInRegionTextBrush = new SolidColorBrush(MapConf.ActiveColourScheme.InRegionSystemTextColour);
+            SysInRegionTextBrush.Freeze();
             Brush SysOutRegionTextBrush = new SolidColorBrush(MapConf.ActiveColourScheme.OutRegionSystemTextColour);
+            SysOutRegionTextBrush.Freeze();
 
             Brush FriendlyJumpBridgeBrush = new SolidColorBrush(MapConf.ActiveColourScheme.FriendlyJumpBridgeColour);
+            FriendlyJumpBridgeBrush.Freeze();
             Brush DisabledJumpBridgeBrush = new SolidColorBrush(MapConf.ActiveColourScheme.DisabledJumpBridgeColour);
+            DisabledJumpBridgeBrush.Freeze();
 
             Brush JumpInRange = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+            JumpInRange.Freeze();
             Brush JumpInRangeMulti = new SolidColorBrush(Colors.Black);
+            JumpInRangeMulti.Freeze();
 
             Brush Incursion = new SolidColorBrush(MapConf.ActiveColourScheme.ActiveIncursionColour);
+            Incursion.Freeze();
 
             Brush ConstellationHighlight = new SolidColorBrush(MapConf.ActiveColourScheme.ConstellationHighlightColour);
+            ConstellationHighlight.Freeze();
 
             Brush DarkTextColourBrush = new SolidColorBrush(Colors.Black);
+            DarkTextColourBrush.Freeze();
 
             Color bgtc = MapConf.ActiveColourScheme.MapBackgroundColour;
             bgtc.A = 192;
             Brush SysTextBackgroundBrush = new SolidColorBrush(bgtc);
+            SysTextBackgroundBrush.Freeze();
 
             Color bgd = MapConf.ActiveColourScheme.MapBackgroundColour;
 
@@ -2467,12 +2828,16 @@ namespace SMT
             bgd.B = (byte)(darkenFactor * bgd.B);
 
             Brush MapBackgroundBrushDarkend = new SolidColorBrush(bgd);
+            MapBackgroundBrushDarkend.Freeze();
 
             List<long> AlliancesKeyList = new List<long>();
 
             Brush NormalGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.NormalGateColour);
+            NormalGateBrush.Freeze();
             Brush ConstellationGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.ConstellationGateColour);
+            ConstellationGateBrush.Freeze();
             Brush RegionGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.RegionGateColour);
+            RegionGateBrush.Freeze();
 
             // cache all system links
             List<GateHelper> systemLinks = new List<GateHelper>();
@@ -2518,6 +2883,7 @@ namespace SMT
                 }
 
                 Brush securityColorFill = new SolidColorBrush(MapColours.GetSecStatusColour(trueSecVal, MapConf.ShowTrueSec));
+                securityColorFill.Freeze();
 
 
 
@@ -2628,7 +2994,9 @@ namespace SMT
                             r = (byte)(255 - (255 * (Blend - 0.5) / 0.5));
                         }
 
-                        SystemOutline.Fill = new SolidColorBrush(Color.FromRgb(r, g, 0));
+                        var admBrush = new SolidColorBrush(Color.FromRgb(r, g, 0));
+                        admBrush.Freeze();
+                        SystemOutline.Fill = admBrush;
                     }
 
                     SystemOutline.DataContext = mapSystem;
@@ -2811,7 +3179,9 @@ namespace SMT
                     CynoBeaconLogo.Stroke = SysOutlineBrush;
                     CynoBeaconLogo.StrokeThickness = 1.0;
                     CynoBeaconLogo.StrokeLineJoin = PenLineJoin.Round;
-                    CynoBeaconLogo.Fill = new SolidColorBrush(Colors.OrangeRed);
+                    var orangeRedBrush = new SolidColorBrush(Colors.OrangeRed);
+                    orangeRedBrush.Freeze();
+                    CynoBeaconLogo.Fill = orangeRedBrush;
 
                     Canvas.SetLeft(CynoBeaconLogo, mapSystem.Layout.X + 7);
                     Canvas.SetTop(CynoBeaconLogo, mapSystem.Layout.Y - 12);
@@ -3145,7 +3515,9 @@ namespace SMT
                 AllianceNameListStackPanel.Children.Clear();
 
                 Brush fontColour = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF767576"));
+                fontColour.Freeze();
                 Brush SelectedFont = new SolidColorBrush(Colors.White);
+                SelectedFont.Freeze();
 
                 List<Label> AllianceNameListLabels = new List<Label>();
 
@@ -3309,14 +3681,22 @@ namespace SMT
             if(HelpList.Visibility == Visibility.Hidden)
             {
                 HelpList.Visibility = Visibility.Visible;
-                helpIcon.Fill = new SolidColorBrush(Colors.Yellow);
-                HelpQM.Foreground = new SolidColorBrush(Colors.Black);
+                var yellowBrush = new SolidColorBrush(Colors.Yellow);
+                yellowBrush.Freeze();
+                helpIcon.Fill = yellowBrush;
+                var blackBrush = new SolidColorBrush(Colors.Black);
+                blackBrush.Freeze();
+                HelpQM.Foreground = blackBrush;
             }
             else
             {
                 HelpList.Visibility = Visibility.Hidden;
-                helpIcon.Fill = new SolidColorBrush(Colors.Black);
-                HelpQM.Foreground = new SolidColorBrush(Colors.White);
+                var blackBrush2 = new SolidColorBrush(Colors.Black);
+                blackBrush2.Freeze();
+                helpIcon.Fill = blackBrush2;
+                var whiteBrush = new SolidColorBrush(Colors.White);
+                whiteBrush.Freeze();
+                HelpQM.Foreground = whiteBrush;
             }
         }
 
@@ -3592,188 +3972,392 @@ namespace SMT
                 SystemInfoPopup.HorizontalOffset = 15;
                 SystemInfoPopup.DataContext = selectedSys.ActualSystem;
 
-                SystemInfoPopupSP.Background = new SolidColorBrush(MapConf.ActiveColourScheme.PopupBackground);
+                // --- Modern Space Dark popup ---
+
+                SystemInfoPopupSP.Background = Brushes.Transparent;
 
                 SystemInfoPopupSP.Children.Clear();
 
-                Label header = new Label();
-                header.Content = selectedSys.LocalizedName;
-                header.FontWeight = FontWeights.Bold;
-                header.FontSize = 14;
-                header.Padding = one;
-                header.Margin = one;
-                header.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
 
-                SystemInfoPopupSP.Children.Add(header);
-                SystemInfoPopupSP.Children.Add(new Separator());
 
-                bool needSeperator = false;
-                List<string> charNames = new List<string>();
-                foreach(LocalCharacter c in EM.LocalCharacters)
+                // colour tokens
+
+                Color popupFg      = Color.FromRgb(0xe6, 0xed, 0xf3); // #e6edf3 primary text
+
+                Color popupMuted   = Color.FromRgb(0x8b, 0x94, 0x9e); // #8b949e muted label
+
+                Color popupAccent  = Color.FromRgb(0x58, 0xa6, 0xff); // #58a6ff accent blue
+
+                Color popupBorder  = Color.FromArgb(0x40, 0xff, 0xff, 0xff);
+
+
+
+                Brush fgBrush     = new SolidColorBrush(popupFg);
+                fgBrush.Freeze();
+
+                Brush mutedBrush  = new SolidColorBrush(popupMuted);
+                mutedBrush.Freeze();
+
+                Brush accentBrush = new SolidColorBrush(popupAccent);
+                accentBrush.Freeze();
+
+
+
+                // helper: add a key/value row
+
+                void AddRow(string key, string val, Brush valBrush = null)
+
                 {
-                    if(c.Location == selectedSys.Name)
+
+                    Grid row = new Grid { Margin = new Thickness(12, 3, 12, 3) };
+
+                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+
+                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+
+
+                    TextBlock keyTb = new TextBlock
+
                     {
-                        needSeperator = true;
-                        Label characterlabel = new Label();
-                        string cname = c.Name;
-                        if(!c.IsOnline)
-                        {
-                            cname += " (Offline)";
-                        }
+
+                        Text = key,
+
+                        Foreground = mutedBrush,
+
+                        FontSize = 11,
+
+                        VerticalAlignment = VerticalAlignment.Center,
+
+                    };
+
+                    TextBlock valTb = new TextBlock
+
+                    {
+
+                        Text = val,
+
+                        Foreground = valBrush ?? fgBrush,
+
+                        FontSize = 11,
+
+                        VerticalAlignment = VerticalAlignment.Center,
+
+                        FontWeight = FontWeights.Medium,
+
+                    };
+
+                    Grid.SetColumn(keyTb, 0);
+
+                    Grid.SetColumn(valTb, 1);
+
+                    row.Children.Add(keyTb);
+
+                    row.Children.Add(valTb);
+
+                    SystemInfoPopupSP.Children.Add(row);
+
+                }
+
+
+
+                // helper: thin separator line
+
+                void AddDivider()
+
+                {
+
+                    Rectangle div = new Rectangle
+
+                    {
+
+                        Height = 1,
+
+                        Margin = new Thickness(8, 4, 8, 4),
+
+                        Fill = new SolidColorBrush(Color.FromArgb(0x30, 0xff, 0xff, 0xff)),
+
+                    };
+
+                    SystemInfoPopupSP.Children.Add(div);
+
+                }
+
+
+
+                // --- Header ---
+
+                Border headerBg = new Border
+
+                {
+
+                    Background       = new SolidColorBrush(Color.FromArgb(0x50, 0x1f, 0x6f, 0xeb)),
+
+                    CornerRadius     = new CornerRadius(5, 5, 0, 0),
+
+                    Padding          = new Thickness(12, 8, 12, 8),
+
+                };
+
+                TextBlock headerTb = new TextBlock
+
+                {
+
+                    Text       = selectedSys.LocalizedName,
+
+                    FontSize   = 14,
+
+                    FontWeight = FontWeights.SemiBold,
+
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xe6, 0xed, 0xf3)),
+
+                };
+
+                headerBg.Child = headerTb;
+
+                SystemInfoPopupSP.Children.Add(headerBg);
+
+
+
+                // spacer
+
+                SystemInfoPopupSP.Children.Add(new Border { Height = 4 });
+
+                // Use zh-CN popup labels when that UI language is active
+
+                bool isZH = SMT.EVEData.EveManager.CurrentLanguage == "zh-CN";
+
+
+
+                // --- Characters in this system ---
+
+                List<string> charNames = new List<string>();
+
+                foreach(LocalCharacter c in EM.LocalCharacters)
+
+                {
+
+                    if(c.Location == selectedSys.Name)
+
+                    {
+
+                        string cname = c.Name + (c.IsOnline ? "" : (isZH ? " (离线)" : " (Offline)"));
+
                         charNames.Add(cname);
+
                     }
+
                 }
 
                 charNames.Sort();
 
-                foreach(string s in charNames)
-                {
-                    Label characterlabel = new Label();
-                    characterlabel.Padding = one;
-                    characterlabel.Margin = one;
-                    characterlabel.Content = s;
+                if(charNames.Count > 0)
 
-                    characterlabel.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(characterlabel);
+                {
+
+                    foreach(string s in charNames)
+
+                        AddRow(isZH ? "角色" : "Pilot", s, accentBrush);
+
+                    AddDivider();
+
                 }
 
-                if(needSeperator)
+
+
+                // --- System info ---
+
+                AddRow(isZH ? "星座" : "Const", selectedSys.ActualSystem.ConstellationName);
+
+
+
+                // Security: colour by sec type
+
+                string secStr = $"{selectedSys.ActualSystem.TrueSec:0.00}  {selectedSys.ActualSystem.SecType}";
+
+                Brush secBrush;
+
+                double trueSec = selectedSys.ActualSystem.TrueSec;
+
+                if(trueSec >= 0.5)
+
+                    secBrush = new SolidColorBrush(Color.FromRgb(0x3f, 0xb9, 0x50));   // green
+
+                else if(trueSec > 0.0)
+
+                    secBrush = new SolidColorBrush(Color.FromRgb(0xf0, 0x88, 0x3e));   // orange
+
+                else
+
+                    secBrush = new SolidColorBrush(Color.FromRgb(0xf8, 0x51, 0x49));   // red
+
+                AddRow(isZH ? "安全等级" : "Security", secStr, secBrush);
+
+
+
+                // --- Kill / jump stats ---
+
+                bool hasStats = selectedSys.ActualSystem.ShipKillsLastHour != 0
+
+                             || selectedSys.ActualSystem.PodKillsLastHour  != 0
+
+                             || selectedSys.ActualSystem.NPCKillsLastHour  != 0
+
+                             || selectedSys.ActualSystem.JumpsLastHour     != 0;
+
+                if(hasStats)
+
                 {
-                    SystemInfoPopupSP.Children.Add(new Separator());
+
+                    AddDivider();
+
+                    Brush dangerBrush = new SolidColorBrush(Color.FromRgb(0xf8, 0x51, 0x49));
+
+                    if(selectedSys.ActualSystem.ShipKillsLastHour != 0)
+
+                        AddRow(isZH ? "舰船击杀" : "Ship Kills", selectedSys.ActualSystem.ShipKillsLastHour.ToString(), dangerBrush);
+
+                    if(selectedSys.ActualSystem.PodKillsLastHour != 0)
+
+                        AddRow(isZH ? "太空舱击杀" : "Pod Kills",  selectedSys.ActualSystem.PodKillsLastHour.ToString(), dangerBrush);
+
+                    if(selectedSys.ActualSystem.NPCKillsLastHour != 0)
+                    {
+                        int npcKills = selectedSys.ActualSystem.NPCKillsLastHour;
+                        int npcDelta = selectedSys.ActualSystem.NPCKillsDeltaLastHour;
+
+                        // delta: increase = bad (red), decrease = good (green), zero = neutral
+                        string deltaSymbol;
+                        Brush  deltaBrush;
+                        if(npcDelta > 0)
+                        {
+                            deltaSymbol = "▲ " + npcDelta.ToString();
+                            deltaBrush  = new SolidColorBrush(Color.FromRgb(0xf8, 0x51, 0x49));
+                        }
+                        else if(npcDelta < 0)
+                        {
+                            deltaSymbol = "▼ " + Math.Abs(npcDelta).ToString();
+                            deltaBrush  = new SolidColorBrush(Color.FromRgb(0x3f, 0xb9, 0x50));
+                        }
+                        else
+                        {
+                            deltaSymbol = "—";
+                            deltaBrush  = mutedBrush;
+                        }
+
+                        Grid npcRow = new Grid { Margin = new Thickness(12, 3, 12, 3) };
+                        npcRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+                        npcRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                        TextBlock npcKeyTb = new TextBlock
+                        {
+                            Text = isZH ? "NPC 击杀" : "NPC Kills",
+                            Foreground = mutedBrush,
+                            FontSize = 11,
+                            VerticalAlignment = VerticalAlignment.Center,
+                        };
+                        TextBlock npcValTb = new TextBlock
+                        {
+                            FontSize = 11,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            FontWeight = FontWeights.Medium,
+                        };
+                        npcValTb.Inlines.Add(new System.Windows.Documents.Run(npcKills.ToString()) { Foreground = fgBrush });
+                        npcValTb.Inlines.Add(new System.Windows.Documents.Run("  "));
+                        npcValTb.Inlines.Add(new System.Windows.Documents.Run(deltaSymbol) { Foreground = deltaBrush });
+                        Grid.SetColumn(npcKeyTb, 0);
+                        Grid.SetColumn(npcValTb, 1);
+                        npcRow.Children.Add(npcKeyTb);
+                        npcRow.Children.Add(npcValTb);
+                        SystemInfoPopupSP.Children.Add(npcRow);
+                    }
+                    if(selectedSys.ActualSystem.JumpsLastHour != 0)
+
+                        AddRow(isZH ? "跳跃数" : "Jumps", selectedSys.ActualSystem.JumpsLastHour.ToString());
+
                 }
 
-                // Use zh-CN popup labels when that UI language is active
-                bool isZH = SMT.EVEData.EveManager.CurrentLanguage == "zh-CN";
 
-                Label constellation = new Label();
-                constellation.Padding = one;
-                constellation.Margin = one;
-                constellation.Content = (isZH ? "星座\t:  " : "Const\t:  ") + selectedSys.ActualSystem.ConstellationName;
-                constellation.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                SystemInfoPopupSP.Children.Add(constellation);
 
-                Label secstatus = new Label();
-                secstatus.Padding = one;
-                secstatus.Margin = one;
-                secstatus.Content = (isZH ? "安全等级\t:  " : "Security\t:  ") + string.Format("{0:0.00}", selectedSys.ActualSystem.TrueSec) + " (" + selectedSys.ActualSystem.SecType + ")";
-                secstatus.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                SystemInfoPopupSP.Children.Add(secstatus);
+                // --- Jump bridges ---
 
-                SystemInfoPopupSP.Children.Add(new Separator());
+                if(ShowJumpBridges)
 
-                if (selectedSys.ActualSystem.ShipKillsLastHour != 0)
                 {
-                    Label data = new Label();
-                    data.Padding = one;
-                    data.Margin = one;
-                    data.Content = isZH ? $"舰船击杀\t:  {selectedSys.ActualSystem.ShipKillsLastHour}" : $"Ship Kills\t:  {selectedSys.ActualSystem.ShipKillsLastHour}";
-                    data.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(data);
-                }
 
-                if (selectedSys.ActualSystem.PodKillsLastHour != 0)
-                {
-                    Label data = new Label();
-                    data.Padding = one;
-                    data.Margin = one;
-                    data.Content = isZH ? $"太空舱击杀\t:  {selectedSys.ActualSystem.PodKillsLastHour}" : $"Pod Kills\t:  {selectedSys.ActualSystem.PodKillsLastHour}";
-                    data.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(data);
-                }
-
-                if (selectedSys.ActualSystem.NPCKillsLastHour != 0)
-                {
-                    Label data = new Label();
-                    data.Padding = one;
-                    data.Margin = one;
-                    data.Content = isZH ? $"NPC 击杀\t:  {selectedSys.ActualSystem.NPCKillsLastHour}, 变化 ({selectedSys.ActualSystem.NPCKillsDeltaLastHour})" : $"NPC Kills\t:  {selectedSys.ActualSystem.NPCKillsLastHour}, Delta ({selectedSys.ActualSystem.NPCKillsDeltaLastHour})";
-                    data.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(data);
-                }
-
-                if (selectedSys.ActualSystem.JumpsLastHour != 0)
-                {
-                    Label data = new Label();
-                    data.Padding = one;
-                    data.Margin = one;
-
-                    data.Content = isZH ? $"跳跃数\t:  {selectedSys.ActualSystem.JumpsLastHour}" : $"Jumps\t:  {selectedSys.ActualSystem.JumpsLastHour}";
-                    data.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(data);
-                }
-
-                if (ShowJumpBridges)
-                {
                     Point from = new Point();
-                    Point to = new Point(); ;
+
+                    Point to = new Point();
+
                     bool AddJBHighlight = false;
                     int JBZone = 0;
                     long targetSystemID = 0;
 
 
 
+                    bool jbSectionOpen  = false;
+
+
+
                     foreach(EVEData.JumpBridge jb in EM.JumpBridges)
+
                     {
 
-                        if(selectedSys.Name == jb.From)
+                        string jbTarget = null;
+
+                        if(selectedSys.Name == jb.From) jbTarget = jb.To;
+
+                        else if(selectedSys.Name == jb.To) jbTarget = jb.From;
+
+
+
+                        if(jbTarget != null)
+
                         {
-                            Label jbl = new Label();
-                            jbl.Padding = one;
-                            jbl.Margin = one;
-                            jbl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                            jbl.Content = $"JB\t: {jb.To}";
 
-                            targetSystemID = EM.GetEveSystem(jb.To).ID;
+                            if(!jbSectionOpen) { AddDivider(); jbSectionOpen = true; }
 
-                            if(!Region.IsSystemOnMap(jb.To))
+                            targetSystemID = EM.GetEveSystem(jbTarget).ID;
+
+                            string jbLabel = jbTarget;
+
+                            if(!Region.IsSystemOnMap(jbTarget))
+
                             {
-                                EVEData.System sys = EM.GetEveSystem(jb.To);
-                                jbl.Content += $" ({sys.Region})";
+
+                                EVEData.System jbSys = EM.GetEveSystem(jbTarget);
+
+                                if(jbSys != null) jbLabel += $"  ({jbSys.Region})";
+
                             }
 
-                            SystemInfoPopupSP.Children.Add(jbl);
+                            AddRow("JB →", jbLabel, accentBrush);
+
+
 
                             from.X = selectedSys.Layout.X;
+
                             from.Y = selectedSys.Layout.Y;
 
-                            if(Region.IsSystemOnMap(jb.To) && !jb.Disabled)
+                            bool isFrom = (selectedSys.Name == jb.From);
+
+                            string mapTarget = isFrom ? jb.To : jb.From;
+
+                            if(Region.IsSystemOnMap(mapTarget) && !jb.Disabled)
+
                             {
-                                MapSystem ms = Region.MapSystems[jb.To];
+
+                                MapSystem ms = Region.MapSystems[mapTarget];
+
                                 to.X = ms.Layout.X;
+
                                 to.Y = ms.Layout.Y;
+
                                 AddJBHighlight = true;
+
                             }
+
                         }
 
-                        if(selectedSys.Name == jb.To)
-                        {
-                            Label jbl = new Label();
-                            jbl.Padding = one;
-                            jbl.Margin = one;
-                            jbl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                            jbl.Content = $"JB\t: {jb.From}";
-
-                            targetSystemID = EM.GetEveSystem(jb.From).ID;
-
-                            if(!Region.IsSystemOnMap(jb.From))
-                            {
-                                EVEData.System sys = EM.GetEveSystem(jb.From);
-                                jbl.Content += $" ({sys.Region})";
-                            }
-
-                            SystemInfoPopupSP.Children.Add(jbl);
-
-                            from.X = selectedSys.Layout.X;
-                            from.Y = selectedSys.Layout.Y;
-
-                            if(Region.IsSystemOnMap(jb.From) && !jb.Disabled)
-                            {
-                                MapSystem ms = Region.MapSystems[jb.From];
-                                to.X = ms.Layout.X;
-                                to.Y = ms.Layout.Y;
-                                AddJBHighlight = true;
-                            }
-                        }
                     }
 
 
@@ -3828,29 +4412,33 @@ namespace SMT
                         }
                     }
 
-
                     if(AddJBHighlight)
+
                     {
-                        Line jbHighlight = new Line();
 
-                        Brush highlightBrush = new SolidColorBrush(Colors.Yellow);
+                        Brush highlightBrush = new SolidColorBrush(Color.FromRgb(0x79, 0xc0, 0xff));
 
-                        jbHighlight.X1 = from.X;
-                        jbHighlight.Y1 = from.Y;
 
-                        jbHighlight.X2 = to.X;
-                        jbHighlight.Y2 = to.Y;
 
-                        jbHighlight.StrokeThickness = 5;
-                        jbHighlight.Visibility = Visibility.Visible;
-                        jbHighlight.IsHitTestVisible = false;
-                        jbHighlight.Stroke = highlightBrush;
-                        jbHighlight.StrokeThickness = 5;
+                        Line jbHighlight = new Line
 
-                        DoubleCollection dashes = new DoubleCollection();
-                        dashes.Add(1.0);
-                        dashes.Add(1.0);
-                        jbHighlight.StrokeDashArray = dashes;
+                        {
+
+                            X1 = from.X, Y1 = from.Y,
+
+                            X2 = to.X,   Y2 = to.Y,
+
+                            Stroke = highlightBrush,
+
+                            StrokeThickness = 3,
+
+                            IsHitTestVisible = false,
+
+                            StrokeDashArray = new DoubleCollection { 1.0, 1.0 },
+
+                            Visibility = Visibility.Visible,
+
+                        };
 
                         DynamicMapElementsJBHighlight.Add(jbHighlight);
 
@@ -3858,229 +4446,251 @@ namespace SMT
 
                         MainCanvas.Children.Add(jbHighlight);
 
-                        double circleSize = 30;
+
+
+                        double circleSize   = 30;
+
                         double circleOffset = circleSize / 2;
 
-                        Shape jbhighlightEndPointCircle = new Ellipse() { Height = circleSize, Width = circleSize };
+                        Ellipse jbCircle = new Ellipse
 
-                        jbhighlightEndPointCircle.Stroke = highlightBrush;
-                        jbhighlightEndPointCircle.StrokeThickness = 1.5;
-                        jbhighlightEndPointCircle.StrokeLineJoin = PenLineJoin.Round;
+                        {
 
-                        Canvas.SetLeft(jbhighlightEndPointCircle, to.X - circleOffset);
-                        Canvas.SetTop(jbhighlightEndPointCircle, to.Y - circleOffset);
+                            Height = circleSize, Width = circleSize,
 
-                        DynamicMapElementsJBHighlight.Add(jbhighlightEndPointCircle);
+                            Stroke = highlightBrush, StrokeThickness = 1.5,
 
-                        Canvas.SetZIndex(jbhighlightEndPointCircle, 19);
+                        };
 
-                        MainCanvas.Children.Add(jbhighlightEndPointCircle);
+                        Canvas.SetLeft(jbCircle, to.X - circleOffset);
+
+                        Canvas.SetTop(jbCircle,  to.Y - circleOffset);
+
+                        DynamicMapElementsJBHighlight.Add(jbCircle);
+
+                        Canvas.SetZIndex(jbCircle, 19);
+
+                        MainCanvas.Children.Add(jbCircle);
+
                     }
+
                 }
 
-                bool addAdditionalHighlights = true;
-                if(addAdditionalHighlights)
+
+
+                // --- Gate highlights ---
+
                 {
-                    Brush NormalGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.NormalGateColour);
-                    Brush ConstellationGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.ConstellationGateColour);
-                    Brush RegionGateBrush = new SolidColorBrush(MapConf.ActiveColourScheme.RegionGateColour);
+
+                    Brush NormalGateBrush        = new SolidColorBrush(MapConf.ActiveColourScheme.NormalGateColour);
+
+                    Brush ConstellationGateBrush  = new SolidColorBrush(MapConf.ActiveColourScheme.ConstellationGateColour);
+
+                    Brush RegionGateBrush         = new SolidColorBrush(MapConf.ActiveColourScheme.RegionGateColour);
+
+
 
                     foreach(string connection in selectedSys.ActualSystem.Jumps)
+
                     {
 
-
                         if(Region.MapSystems.ContainsKey(connection))
+
                         {
+
                             MapSystem s1 = Region.MapSystems[connection];
 
-                            Line sysLink = new Line();
-                            sysLink.Stroke = NormalGateBrush;
+                            Brush linkBrush = NormalGateBrush;
 
                             if(selectedSys.ActualSystem.ConstellationID != s1.ActualSystem.ConstellationID)
-                            {
-                                sysLink.Stroke = ConstellationGateBrush;
-                            }
+
+                                linkBrush = ConstellationGateBrush;
 
                             if(selectedSys.ActualSystem.Region != s1.ActualSystem.Region)
+
+                                linkBrush = RegionGateBrush;
+
+
+
+                            Line sysLink = new Line
+
                             {
-                                sysLink.Stroke = RegionGateBrush;
-                            }
 
+                                X1 = selectedSys.Layout.X, Y1 = selectedSys.Layout.Y,
 
+                                X2 = s1.Layout.X,          Y2 = s1.Layout.Y,
 
-                            sysLink.X1 = selectedSys.Layout.X;
-                            sysLink.Y1 = selectedSys.Layout.Y;
+                                Stroke = linkBrush, StrokeThickness = 4,
 
-                            sysLink.X2 = s1.Layout.X;
-                            sysLink.Y2 = s1.Layout.Y;
-
-
-                            sysLink.StrokeThickness = 4;
+                            };
 
                             DynamicMapElementsSysLinkHighlight.Add(sysLink);
+
                             Canvas.SetZIndex(sysLink, 19);
+
                             MainCanvas.Children.Add(sysLink);
+
                         }
 
-
                     }
+
                 }
 
-                // update IHubInfo
+                // --- Sov / IHUB ---
                 if(selectedSys.ActualSystem.SovADM != 0.0f)
                 {
-                    SystemInfoPopupSP.Children.Add(new Separator());
-
-                    Label sov = new Label();
-                    sov.Padding = one;
-                    sov.Margin = one;
-
-                    string SovInfo = "";
-                    
+                    AddDivider();
 
                     if(selectedSys.ActualSystem.SovVunerabliltyStart != default)
                     {
-                        SovInfo += $"\nIHUB\t :  {selectedSys.ActualSystem.SovVunerabliltyStart:t} to {selectedSys.ActualSystem.SovVunerabliltyEnd:t}";
+                        AddRow("IHUB", $"{selectedSys.ActualSystem.SovVunerabliltyStart:t} – {selectedSys.ActualSystem.SovVunerabliltyEnd:t}");
                     }
 
-                    SovInfo += $"\nADM \t\t :  {selectedSys.ActualSystem.SovADM}";
-
+                    string admInfo = selectedSys.ActualSystem.SovADM.ToString();
                     if(selectedSys.ActualSystem.SovIsCapitalSystem)
                     {
-                        SovInfo += " (Capital)";
+                        admInfo += " (Capital)";
                     }
-
-
-                    SovInfo     += $"\n - Strategy\t :  {selectedSys.ActualSystem.SovStrategyLevel}";
-                    SovInfo     += $"\n - Military\t :  {selectedSys.ActualSystem.SovMilitaryLevel}";
-                    SovInfo     += $"\n - Industry\t :  {selectedSys.ActualSystem.SovIndustyLevel}";
-
-
-
-                    sov.Content = SovInfo;
-                    sov.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(sov);
+                    AddRow("ADM", admInfo);
+                    AddRow(" - Strategy", selectedSys.ActualSystem.SovStrategyLevel.ToString());
+                    AddRow(" - Military", selectedSys.ActualSystem.SovMilitaryLevel.ToString());
+                    AddRow(" - Industry", selectedSys.ActualSystem.SovIndustyLevel.ToString());
                 }
 
 
-                // update Infrastructure Upgrades
+                // --- Infrastructure upgrades ---
+
                 if(selectedSys.ActualSystem.InfrastructureUpgrades.Count > 0)
+
                 {
-                    Label upgradeHeader = new Label();
-                    upgradeHeader.Padding = one;
-                    upgradeHeader.Margin = one;
-                    upgradeHeader.Content = "Infrastructure Upgrades:";
-                    upgradeHeader.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    upgradeHeader.FontWeight = FontWeights.Bold;
-                    SystemInfoPopupSP.Children.Add(upgradeHeader);
+
+                    AddDivider();
 
                     foreach(EVEData.InfrastructureUpgrade upgrade in selectedSys.ActualSystem.InfrastructureUpgrades.OrderBy(u => u.SlotNumber))
+
                     {
-                        Label upgradeLabel = new Label();
-                        upgradeLabel.Padding = new Thickness(15, 1, 1, 1);
-                        upgradeLabel.Margin = one;
-                        upgradeLabel.Content = $"{upgrade.SlotNumber}. {upgrade.DisplayName} - {upgrade.Status}";
-                        upgradeLabel.Foreground = new SolidColorBrush(upgrade.IsOnline ? Colors.LightGreen : Colors.Gray);
-                        SystemInfoPopupSP.Children.Add(upgradeLabel);
+
+                        Brush upgBrush = new SolidColorBrush(upgrade.IsOnline
+
+                            ? Color.FromRgb(0x3f, 0xb9, 0x50)
+
+                            : Color.FromRgb(0x48, 0x4f, 0x58));
+
+                        AddRow($"{upgrade.SlotNumber}.", $"{upgrade.DisplayName}  {upgrade.Status}", upgBrush);
+
                     }
+
                 }
 
-                List<TheraConnection> currentTheraConnections = EM.TheraConnections.ToList();
-                // update Thera Info
-                foreach(EVEData.TheraConnection tc in currentTheraConnections)
-                {
-                    if(selectedSys.Name == tc.System)
-                    {
-                        SystemInfoPopupSP.Children.Add(new Separator());
 
-                        Label tl = new Label();
-                        tl.Padding = one;
-                        tl.Margin = one;
-                        tl.Content = $"Thera\t: in {tc.InSignatureID}";
-                        tl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                        SystemInfoPopupSP.Children.Add(tl);
 
-                        tl = new Label();
-                        tl.Padding = one;
-                        tl.Margin = one;
-                        tl.Content = $"Thera\t: out {tc.OutSignatureID}";
-                        tl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                        SystemInfoPopupSP.Children.Add(tl);
-                    }
-                }
+                // --- Thera / Turnur / Storms / POIs / Trig ---
+
+                bool extraSection = false;
+
+                List<TheraConnection>  currentTheraConnections  = EM.TheraConnections.ToList();
+
                 List<TurnurConnection> currentTurnurConnections = EM.TurnurConnections.ToList();
 
-                // update Turnur Info
-                foreach(EVEData.TurnurConnection tc in currentTurnurConnections)
+
+
+                foreach(EVEData.TheraConnection tc in currentTheraConnections)
+
                 {
+
                     if(selectedSys.Name == tc.System)
+
                     {
-                        SystemInfoPopupSP.Children.Add(new Separator());
 
-                        Label tl = new Label();
-                        tl.Padding = one;
-                        tl.Margin = one;
-                        tl.Content = $"Turnur\t: in {tc.InSignatureID}";
-                        tl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                        SystemInfoPopupSP.Children.Add(tl);
+                        if(!extraSection) { AddDivider(); extraSection = true; }
 
-                        tl = new Label();
-                        tl.Padding = one;
-                        tl.Margin = one;
-                        tl.Content = $"Turnur\t: out {tc.OutSignatureID}";
-                        tl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                        SystemInfoPopupSP.Children.Add(tl);
+                        AddRow("Thera ↓", tc.InSignatureID,  accentBrush);
+
+                        AddRow("Thera ↑", tc.OutSignatureID, accentBrush);
+
                     }
+
                 }
 
-                // storms
+                foreach(EVEData.TurnurConnection tc in currentTurnurConnections)
+
+                {
+
+                    if(selectedSys.Name == tc.System)
+
+                    {
+
+                        if(!extraSection) { AddDivider(); extraSection = true; }
+
+                        AddRow("Turnur ↓", tc.InSignatureID,  accentBrush);
+
+                        AddRow("Turnur ↑", tc.OutSignatureID, accentBrush);
+
+                    }
+
+                }
+
                 foreach(EVEData.Storm s in EM.MetaliminalStorms)
-                {
-                    if(selectedSys.Name == s.System)
-                    {
-                        SystemInfoPopupSP.Children.Add(new Separator());
 
-                        Label tl = new Label();
-                        tl.Padding = one;
-                        tl.Margin = one;
-                        tl.Content = $"Storm\t: {s.Type}";
-                        tl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                        SystemInfoPopupSP.Children.Add(tl);
+                {
+
+                    if(selectedSys.Name == s.System)
+
+                    {
+
+                        if(!extraSection) { AddDivider(); extraSection = true; }
+
+                        Brush stormBrush = new SolidColorBrush(Color.FromRgb(0xf0, 0x88, 0x3e));
+
+                        AddRow(isZH ? "风暴" : "Storm", s.Type, stormBrush);
+
                     }
+
                 }
 
-                SystemInfoPopupSP.Children.Add(new Separator());
-
-                // Points of interest
                 foreach(POI p in EM.PointsOfInterest)
+
                 {
+
                     if(selectedSys.Name == p.System)
+
                     {
-                        Label tl = new Label();
-                        tl.Padding = one;
-                        tl.Margin = one;
-                        tl.Content = $"{p.Type} : {p.ShortDesc}";
-                        tl.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                        SystemInfoPopupSP.Children.Add(tl);
+
+                        if(!extraSection) { AddDivider(); extraSection = true; }
+
+                        AddRow(p.Type, p.ShortDesc, accentBrush);
+
                     }
+
                 }
 
                 if(MapConf.ShowTrigInvasions && selectedSys.ActualSystem.TrigInvasionStatus != EVEData.System.EdenComTrigStatus.None)
+
                 {
-                    Label trigInfo = new Label();
-                    trigInfo.Padding = one;
-                    trigInfo.Margin = one;
-                    trigInfo.Content = $"Invasion : {selectedSys.ActualSystem.TrigInvasionStatus}";
-                    trigInfo.Foreground = new SolidColorBrush(MapConf.ActiveColourScheme.PopupText);
-                    SystemInfoPopupSP.Children.Add(trigInfo);
+
+                    if(!extraSection) { AddDivider(); extraSection = true; }
+
+                    Brush trigBrush = new SolidColorBrush(Color.FromRgb(0xf8, 0x51, 0x49));
+
+                    AddRow(isZH ? "入侵" : "Invasion", selectedSys.ActualSystem.TrigInvasionStatus.ToString(), trigBrush);
+
                 }
+
+
+
+                // bottom padding
+
+                SystemInfoPopupSP.Children.Add(new Border { Height = 6 });
+
+
 
                 // trigger the hover event
 
                 if(SystemHoverEvent != null)
-                {
+
                     SystemHoverEvent(selectedSys.Name);
-                }
+
+
 
                 SystemInfoPopup.IsOpen = true;
             }

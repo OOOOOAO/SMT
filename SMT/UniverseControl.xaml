@@ -68,12 +68,34 @@
 
         <StackPanel Margin="4,2,1,2"  Orientation="Horizontal" HorizontalAlignment="Left">
             <Label Content="Search :" />
-            <dotNetKitControls:AutoCompleteComboBox x:Name="GlobalSystemDropDownAC" Width="200" FontSize="12" Margin="5,0" SelectionChanged="GlobalSystemDropDownAC_SelectionChanged" TextSearch.TextPath="Name">
+            <dotNetKitControls:AutoCompleteComboBox x:Name="GlobalSystemDropDownAC" Width="200" FontSize="12" Margin="5,0"
+                    SelectionChanged="GlobalSystemDropDownAC_SelectionChanged"
+                    Foreground="{StaticResource ForegroundBrush}"
+                    Background="{StaticResource WindowBackgroundBrush}"
+                    BorderBrush="{StaticResource TabControlNormalBorderBrush}"
+                    BorderThickness="1"
+                    ItemContainerStyle="{DynamicResource ComboBoxItemStyle}"
+                    TextSearch.TextPath="Name">
                 <dotNetKitControls:AutoCompleteComboBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel />
                     </ItemsPanelTemplate>
                 </dotNetKitControls:AutoCompleteComboBox.ItemsPanel>
+                <dotNetKitControls:AutoCompleteComboBox.Resources>
+                    <!-- Force the editable TextBox inside to use dark theme -->
+                    <Style TargetType="{x:Type TextBox}">
+                        <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+                        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                        <Setter Property="CaretBrush" Value="{StaticResource ForegroundBrush}" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Padding" Value="2,1" />
+                    </Style>
+                    <!-- Force dropdown items to use the dark theme -->
+                    <Style TargetType="{x:Type ComboBoxItem}" BasedOn="{StaticResource ComboBoxItemStyle}">
+                        <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+                        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                    </Style>
+                </dotNetKitControls:AutoCompleteComboBox.Resources>
             </dotNetKitControls:AutoCompleteComboBox>
             <Button x:Name="RecentreBtn" Click="RecentreBtn_Click" Padding="0" Height="20" Width="20">
                 <Image Source="Images/recentre.png" />

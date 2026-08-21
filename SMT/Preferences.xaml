@@ -30,7 +30,7 @@
                                     <GroupBox Margin="4" Height="Auto">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,3">
-                                                <Label Content="{DynamicResource Prefs_Language}" VerticalAlignment="Center" Foreground="White" />
+                                                <Label Content="{DynamicResource Prefs_Language}" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}" />
                                                 <ComboBox x:Name="LanguageComboBox" Width="120" SelectionChanged="LanguageComboBox_SelectionChanged" Margin="5,0,0,0">
                                                     <ComboBoxItem Content="English" Tag="en-US" />
                                                     <ComboBoxItem Content="简体中文" Tag="zh-CN" />
@@ -104,7 +104,7 @@
                                     <CheckBox Margin="0,3" IsChecked="{Binding Path=ShowTrigInvasions}" Content="{DynamicResource Prefs_Reg_Trig}" />
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0">
-                                        <xctk:IntegerUpDown Margin="1,3" Value="{Binding Path=MaxESIOverlayValue}" Minimum="30" Maximum="300" Width="60"  Foreground="White" />
+                                        <xctk:IntegerUpDown Margin="1,3" Value="{Binding Path=MaxESIOverlayValue}" Minimum="30" Maximum="300" Width="60"  Foreground="{StaticResource ForegroundBrush}" />
                                         <Label Content="{DynamicResource Prefs_Reg_MaxOver}" />
                                     </StackPanel>
                                 </StackPanel>
@@ -215,17 +215,17 @@
                                         </StackPanel>
 
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=IntelTextSize}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="8" Maximum="20" Background="Transparent"  Foreground="White" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=IntelTextSize}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="8" Maximum="20" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                             <Label Content="{DynamicResource Prefs_Int_TxtSize}" />
                                         </StackPanel>
 
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=MaxIntelSeconds}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="30" Maximum="1200" Background="Transparent"  Foreground="White" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=MaxIntelSeconds}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="30" Maximum="1200" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                             <Label Content="{DynamicResource Prefs_Int_MaxTime}" />
                                         </StackPanel>
 
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=ZkillExpireTimeMinutes}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="120" Background="Transparent"  Foreground="White" ValueChanged="zkilltime_ValueChanged" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=ZkillExpireTimeMinutes}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="120" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" ValueChanged="zkilltime_ValueChanged" />
                                             <Label Content="{DynamicResource Prefs_Int_ZTime}" />
                                         </StackPanel>
                                     </StackPanel>
@@ -283,7 +283,7 @@
                                         <CheckBox IsChecked="{Binding Path=FleetShowOnMap}" Margin="0,2" Content="{DynamicResource Prefs_Msc_ShowFlt}" />
                                         <CheckBox IsChecked="{Binding Path=FleetShowShipType}" Margin="0,2" Content="{DynamicResource Prefs_Msc_ShowShp}" />
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=FleetMaxMembersPerSystem}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="1" Maximum="30" Background="Transparent"  Foreground="White" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=FleetMaxMembersPerSystem}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="1" Maximum="30" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                             <Label Content="{DynamicResource Prefs_Msc_MaxFlt}" />
                                         </StackPanel>
                                     </StackPanel>
@@ -295,11 +295,11 @@
                                     <GroupBox Header="{DynamicResource Prefs_Msc_UniGrp}" Margin="4" Height="auto">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0">
-                                                <xctk:DoubleUpDown Value="{Binding Path=UniverseMaxZoomDisplaySystems}" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="80" Increment="0.1" Maximum="5" Minimum="0.1" FormatString="F1" Background="Transparent"  Foreground="White" />
+                                                <xctk:DoubleUpDown Value="{Binding Path=UniverseMaxZoomDisplaySystems}" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="80" Increment="0.1" Maximum="5" Minimum="0.1" FormatString="F1" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                                 <Label Content="{DynamicResource Prefs_Msc_SysZom}" />
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0">
-                                                <xctk:DoubleUpDown Value="{Binding Path=UniverseMaxZoomDisplaySystemsText}" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="80" Increment="0.1" Maximum="5" Minimum="0.1" FormatString="F1" Background="Transparent"  Foreground="White" />
+                                                <xctk:DoubleUpDown Value="{Binding Path=UniverseMaxZoomDisplaySystemsText}" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="80" Increment="0.1" Maximum="5" Minimum="0.1" FormatString="F1" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                                 <Label Content="{DynamicResource Prefs_Msc_TxtZom}" />
                                             </StackPanel>
                                         </StackPanel>
@@ -311,7 +311,7 @@
                                     <StackPanel>
                                         <CheckBox IsChecked="{Binding Path=ShowIhubVunerabilities}" Margin="0,2" Content="{DynamicResource Prefs_Msc_IHub}" />
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=UpcomingSovMinutes}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="360" Background="Transparent"  Foreground="White" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=UpcomingSovMinutes}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="360" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                             <Label Content="{DynamicResource Prefs_Msc_SovMin}" />
                                         </StackPanel>
                                     </StackPanel>
@@ -355,15 +355,15 @@
                                         </StackPanel>
 
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=IntelFreshTime}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="1" Maximum="900" Background="Transparent"  Foreground="White" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=IntelFreshTime}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="1" Maximum="900" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                             <Label Content="{DynamicResource Prefs_Ovl_Fresh}" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=IntelStaleTime}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="1200" Background="Transparent"  Foreground="White" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=IntelStaleTime}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="1200" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" />
                                             <Label Content="{DynamicResource Prefs_Ovl_Stale}" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <xctk:IntegerUpDown Value="{Binding Path=IntelHistoricTime}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="1200" Background="Transparent"  Foreground="White" ValueChanged="zkilltime_ValueChanged" />
+                                            <xctk:IntegerUpDown Value="{Binding Path=IntelHistoricTime}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Width="70" Minimum="5" Maximum="1200" Background="Transparent"  Foreground="{StaticResource ForegroundBrush}" ValueChanged="zkilltime_ValueChanged" />
                                             <Label Content="{DynamicResource Prefs_Ovl_Hist}" />
                                         </StackPanel>
 
@@ -409,10 +409,53 @@
                     <Grid Height="500" Width="600">
                         <ScrollViewer>
                             <StackPanel>
-                                <xctk:PropertyGrid x:Name="ColoursPropertyGrid" AutoGenerateProperties="True" ShowSearchBox="False" ShowSortOptions="False" Background="Black">
+                                <xctk:PropertyGrid x:Name="ColoursPropertyGrid" AutoGenerateProperties="True" ShowSearchBox="False" ShowSortOptions="False"
+
+                                                   Background="{StaticResource DarkBackgroundBrush}"
+
+                                                   Foreground="{StaticResource ForegroundBrush}"
+
+                                                   BorderBrush="{StaticResource ButtonBorder}">
+
+                                    <xctk:PropertyGrid.Resources>
+                                        <Style TargetType="{x:Type DataGridRow}">
+                                            <Setter Property="Background" Value="{StaticResource DarkBackgroundBrush}" />
+                                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ButtonNormalBackground}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ButtonNormalBackground}" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                        <Style TargetType="{x:Type DataGridCell}">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource ButtonBorder}" />
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource ButtonNormalBackground}" />
+                                                    <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                        <Style TargetType="{x:Type DataGrid}">
+                                            <Setter Property="Background" Value="{StaticResource DarkBackgroundBrush}" />
+                                            <Setter Property="RowBackground" Value="{StaticResource DarkBackgroundBrush}" />
+                                            <Setter Property="AlternatingRowBackground" Value="{StaticResource WindowBackgroundBrush}" />
+                                            <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource ButtonBorder}" />
+                                            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource ButtonBorder}" />
+                                            <Setter Property="VerticalGridLinesBrush" Value="{StaticResource ButtonBorder}" />
+                                        </Style>
+                                    </xctk:PropertyGrid.Resources>
                                     <xctk:PropertyGrid.CategoryGroupHeaderTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding}" Foreground="Black" />
+                                            <TextBlock Text="{Binding}" Foreground="{StaticResource ForegroundBrush}"
+                                                       Background="{StaticResource DarkBackgroundBrush}"
+                                                       Padding="4,2" FontWeight="SemiBold" />
                                         </DataTemplate>
                                     </xctk:PropertyGrid.CategoryGroupHeaderTemplate>
                                 </xctk:PropertyGrid>
@@ -422,7 +465,7 @@
                     </Grid>
                 </TabItem>
             </TabControl>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,2">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="Auto" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,2">
                 <Button Content="{DynamicResource Prefs_Btn_OpenFolder}" Margin="10,0" Width="145" Click="Prefs_OpenFolder_Click" />
                 <Button Content="{DynamicResource Prefs_Btn_Default}" Margin="3,0" Width="60" Click="Prefs_Default_Click" />
                 <Button Content="{DynamicResource Prefs_Btn_OK}" Margin="3,0" Width="55" Click="Prefs_OK_Click" />

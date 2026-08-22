@@ -329,7 +329,7 @@ namespace SMT
         }
         private async Task CheckGitHubVersionAsync()
         {
-            string url = @"https://api.github.com/repos/slazanger/smt/releases/latest";
+            string url = @"https://api.github.com/repos/OOOOOAO/smt/releases/latest";
             string strContent = string.Empty;
 
             try

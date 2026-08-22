@@ -205,7 +205,7 @@ namespace SMT
             {
                 MapConf.CustomEveLogFolderLocation = dialog.SelectedPath;
                 MapConf.CurrentEveLogFolderLocation = EM.EVELogFolder;
-                MessageBox.Show("SMT is now monitoring the selected EVE log folder.", "Log Folder Updated", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("OMT is now monitoring the selected EVE log folder.", "Log Folder Updated", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -219,7 +219,7 @@ namespace SMT
             {
                 MapConf.CustomEveLogFolderLocation = string.Empty;
                 MapConf.CurrentEveLogFolderLocation = EM.EVELogFolder;
-                MessageBox.Show("SMT is now monitoring the default EVE log folder.", "Log Folder Updated", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("OMT is now monitoring the default EVE log folder.", "Log Folder Updated", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {

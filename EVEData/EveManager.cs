@@ -132,7 +132,7 @@ namespace SMT.EVEData
                     return;
                 }
 
-                string oldSettingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SMT");
+                string oldSettingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "OMT");
 
                 // prior to 1.39 all settings were stored in the My Documents\SMT\ folder
                 if(Directory.Exists(oldSettingsFolder))

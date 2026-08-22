@@ -11,7 +11,7 @@ namespace EVEDataUtils
         private static readonly object SyncRoot = new object();
         private static string logDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SMT",
+            "OMT",
             "Logs");
 
         public static event Action<string, bool> StatusChanged;

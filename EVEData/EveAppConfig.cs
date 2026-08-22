@@ -26,19 +26,19 @@ namespace SMT.EVEData
         /// <summary>
         /// SMT Version
         /// </summary>
-        public const string SMT_VERSION = "SMT_149";
+        public const string SMT_VERSION = "v1.0.0";
 
 
         /// <summary>
         /// SMT User Agent Details 
         /// </summary>
-        public const string SMT_USERAGENT_DETAILS = " (+https://github.com/Slazanger/SMT; eve:Slazanger, discord:Slazanger)";
+        public const string SMT_USERAGENT_DETAILS = " (+https://github.com/OOOOOAO/SMT; eve:OOOOOAO, discord:OOOOOAO)";
 
 
         /// <summary>
         /// Folder to store all of the data from
         /// </summary>
-        public static readonly string StorageRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SMT");
+        public static readonly string StorageRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OMT");
 
 
         /// <summary>

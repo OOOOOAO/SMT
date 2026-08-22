@@ -270,7 +270,7 @@ namespace DataGen
         private static HttpClient CreateHttpClient()
         {
             HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("SMT-DataGen/1.0 (https://github.com/Slazanger/SMT)");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("SMT-DataGen/1.0 (https://github.com/OOOOOAO/SMT)");
             return client;
         }
 

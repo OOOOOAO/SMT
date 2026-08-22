@@ -3,6 +3,10 @@
     <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>WinExe</OutputType>
+    <!-- Renamed so OMT.exe can sit beside upstream's SMT.exe. The root namespace
+         deliberately stays SMT, which keeps resource names and upstream merges intact. -->
+    <AssemblyName>OMT</AssemblyName>
+    <RootNamespace>SMT</RootNamespace>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl><Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -53,8 +57,8 @@
     <!-- Phase 0: suppress pre-existing design/globalization CA until addressed incrementally (keep CA1416 platform checks) -->
     <NoWarn>$(NoWarn);CA1001;CA1050;CA1051;CA1304;CA1305;CA1309;CA1310;CA1416;CA1507;CA1707;CA1725;CA1805;CA1806;CA1822;CA1824;CA1829;CA1838;CA1841;CA1852;CA1854;CA1858;CA1859;CA1861;CA1866;CA2201;CA2208;CA2211;CA2251;CA2263;CA5369;WFAC010</NoWarn>
     <SignAssembly>False</SignAssembly>
-    <Version>1.49</Version>
-    <PackageProjectUrl>https://github.com/Slazanger/SMT</PackageProjectUrl>
+    <Version>1.0.0</Version>
+    <PackageProjectUrl>https://github.com/OOOOOAO/SMT</PackageProjectUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <OutputPath>bin\x64\Debug\</OutputPath>

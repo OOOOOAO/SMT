@@ -4,7 +4,7 @@
 
     <s:String x:Key="Menu_File">文件</s:String>
     <s:String x:Key="Menu_Preferences">设置</s:String>
-    <s:String x:Key="Prefs_Title">SMT 设置</s:String>
+    <s:String x:Key="Prefs_Title">OMT 设置</s:String>
     <s:String x:Key="Prefs_Language">界面语言 (Language):</s:String>
     <s:String x:Key="Prefs_Btn_OpenFolder">打开本地存储文件夹</s:String>
     <s:String x:Key="Prefs_Btn_Default">恢复默认</s:String>
@@ -22,7 +22,7 @@
     <s:String x:Key="Prefs_Gen_DrawRoute">在地图上绘制导航路线</s:String>
     <s:String x:Key="Prefs_Gen_MinTray">最小化至系统托盘</s:String>
     <s:String x:Key="Prefs_Gen_CloseTray">点击关闭按钮时缩至托盘</s:String>
-    <s:String x:Key="Prefs_Gen_LogsGrp">EVE 日志路径配置 (修改后需重启SMT)</s:String>
+    <s:String x:Key="Prefs_Gen_LogsGrp">EVE 日志路径配置 (修改后需重启OMT)</s:String>
     <s:String x:Key="Prefs_Gen_CurLog">当前日志路径 :</s:String>
     <s:String x:Key="Prefs_Gen_SetLog">设置自定义日志目录</s:String>
     <s:String x:Key="Prefs_Gen_DefLog">恢复默认日志目录</s:String>
@@ -305,7 +305,7 @@
     <s:String x:Key="NewVer_Notes">更新日志:</s:String>
     <s:String x:Key="NewVer_Down">点击去网页下载</s:String>
 
-    <s:String x:Key="Overlay_Title">SMT 悬浮窗</s:String>
+    <s:String x:Key="Overlay_Title">OMT 悬浮窗</s:String>
     <s:String x:Key="Overlay_NoChar">暂未匹配到角色</s:String>
     <s:String x:Key="Overlay_TipDrag">按住这里拖动悬浮窗。</s:String>
     <s:String x:Key="Overlay_TipToggle">点击切换雷达显示模式。</s:String>

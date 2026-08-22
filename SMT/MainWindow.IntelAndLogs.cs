@@ -250,7 +250,7 @@ namespace SMT
                                 {
                                     // Requires Microsoft.Toolkit.Uwp.Notifications NuGet package version 7.0 or greater
                                     ToastContentBuilder tb = new ToastContentBuilder();
-                                    tb.AddText("SMT Alert");
+                                    tb.AddText("OMT Alert");
                                     tb.AddText("Character : " + character + "(" + lc.Location + ")");
 
                                     // add the character portrait if we have one
@@ -296,7 +296,7 @@ namespace SMT
                                 {
                                     // Requires Microsoft.Toolkit.Uwp.Notifications NuGet package version 7.0 or greater
                                     ToastContentBuilder tb = new ToastContentBuilder();
-                                    tb.AddText("SMT Alert");
+                                    tb.AddText("OMT Alert");
                                     tb.AddText("Character : " + character + "(" + lc.Location + ")");
 
                                     // add the character portrait if we have one

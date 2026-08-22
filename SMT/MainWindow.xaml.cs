@@ -184,7 +184,7 @@ namespace SMT
 
             InitializeComponent();
 
-            Title = $"SMT : {EveAppConfig.SMT_TITLE} ({EveAppConfig.SMT_VERSION})";
+            Title = $"OMT : {EveAppConfig.SMT_TITLE} ({EveAppConfig.SMT_VERSION})";
 
             // Load the Dock Manager Layout file
             string dockManagerLayoutName = Path.Combine(EveAppConfig.StorageRoot, "Layout_" + WindowLayoutVersion + ".dat");
@@ -512,7 +512,7 @@ namespace SMT
                 nIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(currentProcess.MainModule.FileName);
             }
             nIcon.Visible = false;
-            nIcon.Text = "SMT";
+            nIcon.Text = "OMT";
             nIcon.DoubleClick += NIcon_DClick;
             nIcon.ContextMenuStrip = new System.Windows.Forms.ContextMenuStrip();
             nIcon.ContextMenuStrip.Items.Add("Show", null, NIcon_DClick);

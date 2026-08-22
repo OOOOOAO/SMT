@@ -47,7 +47,7 @@ namespace SMT
                     HttpListenerResponse response = context.Response;
                     // Construct a response.
                     //                    string responseString = $"<HTML><BODY>SMT Character Added.. close logon window when done or click <a href=\"{esiLogonURL}\"> here </a> to add another character</BODY></HTML>";
-                    string responseString = $"<HTML><HEAD title=\"SMT Auth\"><meta http-equiv=\"refresh\" content=\"1;url={esiLogonURL}\"></HEAD><BODY>SMT Character Added..</HTML>";
+                    string responseString = $"<HTML><HEAD title=\"OMT Auth\"><meta http-equiv=\"refresh\" content=\"1;url={esiLogonURL}\"></HEAD><BODY>OMT Character Added..</HTML>";
 
                     byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
                     // Get a response stream and write the response to it.

@@ -12,7 +12,7 @@
     <!-- ═══════════════════════ TYPOGRAPHY ═══════════════════════ -->
 
     <!-- Font Families -->
-    <FontFamily x:Key="FontPrimary">pack://application:,,,/SMT;component/External/AtkinsonHyperlegible/#Atkinson Hyperlegible</FontFamily>
+    <FontFamily x:Key="FontPrimary">pack://application:,,,/OMT;component/External/AtkinsonHyperlegible/#Atkinson Hyperlegible</FontFamily>
     <FontFamily x:Key="FontMono">Consolas, Courier New</FontFamily>
 
     <!-- Font Size Scale — base 12px -->

@@ -134,6 +134,7 @@
     <s:String x:Key="Main_Panel_Characters">Characters</s:String>
     <s:String x:Key="Main_Panel_Route">Route</s:String>
     <s:String x:Key="Main_Panel_JumpPlanner">Jump Planner</s:String>
+    <s:String x:Key="Main_Panel_Bookmark">Bookmark Route</s:String>
     <s:String x:Key="Main_BM_GrpInput">Paste Bookmarks</s:String>
     <s:String x:Key="Main_BM_LblK">Empty-run threshold K</s:String>
     <s:String x:Key="Main_BM_LblJ">Jump threshold J (gate detour &gt; J)</s:String>

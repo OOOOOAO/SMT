@@ -801,9 +801,9 @@ namespace SMT
             if(MapConf.DrawRoute)
             {
                 AddRouteToMap();
+            }
 
             AddBookmarkRouteToMap();
-            }
 
             AddWHLinksSystemsToMap();
             AddStormsToMap();
@@ -2138,8 +2138,8 @@ namespace SMT
                 return;
             }
 
-            Brush GateLegBrush = new SolidColorBrush(MapConf.ActiveColourScheme.SelectedSystemColour);
-            Brush JumpLegBrush = new SolidColorBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
+            Brush GateLegBrush = FrozenBrush(MapConf.ActiveColourScheme.SelectedSystemColour);
+            Brush JumpLegBrush = FrozenBrush(MapConf.ActiveColourScheme.JumpRangeInColour);
 
             // Both leg types are dashed, so the flow animation below can show which way to travel. The gate
             // dashes are fine enough that the leg still reads as near-solid ; jump legs stay distinct by their
@@ -2209,7 +2209,7 @@ namespace SMT
                         // Offset runs 0 -> -dashCycle, which marches the dashes from (X1,Y1) toward (X2,Y2) --
                         // the direction of travel, which is the whole point : a still image of this route is an
                         // unreadable tangle. Duration scales with the cycle so both leg types flow at the same
-                        // speed.
+                        // speed. Same treatment AddIntelTrailsOverlay gives the selected enemy's trail.
                         DoubleAnimation flow = new DoubleAnimation
                         {
                             From = 0,

@@ -134,6 +134,7 @@
     <s:String x:Key="Main_Panel_Characters">角色列表</s:String>
     <s:String x:Key="Main_Panel_Route">导航路线</s:String>
     <s:String x:Key="Main_Panel_JumpPlanner">旗舰跳跃规划</s:String>
+    <s:String x:Key="Main_Panel_Bookmark">位标路线规划</s:String>
     <s:String x:Key="Main_BM_GrpInput">粘贴位标</s:String>
     <s:String x:Key="Main_BM_LblK">空系阈值 K</s:String>
     <s:String x:Key="Main_BM_LblJ">跳跃门槛 J（星门绕路 &gt; J 跳才跳）</s:String>

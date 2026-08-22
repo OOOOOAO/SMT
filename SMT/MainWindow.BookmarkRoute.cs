@@ -17,22 +17,58 @@ namespace SMT
         private int bookmarkCalcGeneration;
         private bool bookmarkPushInFlight;
 
+        // One slot per character : switching characters only ever restores what's cached here or
+        // shows an empty panel, it never recalculates. Recalculating a route is exclusively the
+        // "Calculate route" button's job (and the K/J/isolation controls, which already recalc on
+        // change once a paste exists -- switching characters must not join that list).
+        private readonly Dictionary<long, (string StartSystem, BookmarkRoute Result)> bookmarkRouteCache = new Dictionary<long, (string StartSystem, BookmarkRoute Result)>();
+        private long? bookmarkRouteCacheOwnerId;
+
         private void InitBookmarkRoutePanel(List<EVEData.System> globalSystemList)
         {
             BookmarkAvoidSystemDropDownAC.ItemsSource = globalSystemList;
             bookmarkRoutePanelReady = true;
-            OnSelectedCharChangedEventHandler += (s, e) => ResetBookmarkRoutePanel();
+            OnSelectedCharChangedEventHandler += (s, e) => SwitchBookmarkRouteCharacter();
         }
 
-
-        private void ResetBookmarkRoutePanel()
+        private void SwitchBookmarkRouteCharacter()
         {
             if (!bookmarkRoutePanelReady)
             {
                 return;
             }
 
-            bookmarkCalcGeneration++; // any in-flight calculation's result gets discarded when it lands
+            // Stash whatever's on screen under the character we're leaving, so it's there if we switch back.
+            if (bookmarkRouteCacheOwnerId.HasValue)
+            {
+                if (bookmarkRouteResult != null)
+                {
+                    bookmarkRouteCache[bookmarkRouteCacheOwnerId.Value] = (bookmarkRouteStartSystem, bookmarkRouteResult);
+                }
+                else
+                {
+                    bookmarkRouteCache.Remove(bookmarkRouteCacheOwnerId.Value);
+                }
+            }
+
+            bookmarkCalcGeneration++; // any in-flight calculation for the character we're leaving gets discarded when it lands
+
+            EVEData.LocalCharacter character = ActiveCharacter;
+            bookmarkRouteCacheOwnerId = character?.ID;
+
+            if (character != null && bookmarkRouteCache.TryGetValue(character.ID, out (string StartSystem, BookmarkRoute Result) cached))
+            {
+                bookmarkRouteStartSystem = cached.StartSystem;
+                RenderBookmarkResult(cached.Result);
+            }
+            else
+            {
+                ClearBookmarkRoutePanelDisplay();
+            }
+        }
+
+        private void ClearBookmarkRoutePanelDisplay()
+        {
             bookmarkRouteResult = null;
             bookmarkRouteStartSystem = null;
             bookmarkLinesPanel.Children.Clear();

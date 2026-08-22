@@ -378,3 +378,6 @@ memory-bank.md
 tools/
 
 nul
+
+# Inno Setup installer output
+Setup/Output/

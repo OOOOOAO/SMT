@@ -1,0 +1,104 @@
+name: Package installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Installer version override (defaults to SMT_VERSION in EveAppConfig.cs)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: 'true'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $src = (Select-String -Path 'EVEData/EveAppConfig.cs' -Pattern 'SMT_VERSION\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $src) {
+            throw "Tag '$($env:GITHUB_REF_NAME)' does not match SMT_VERSION '$src' in EveAppConfig.cs. The in-app update check compares the release tag to that string literally, so they must be identical."
+          }
+          $v = $src -replace '^v', ''
+          if ($env:INPUT_VERSION) { $v = $env:INPUT_VERSION }
+          Write-Host "SMT_VERSION = $src / installer version = $v"
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Inject EVE client ID
+        shell: pwsh
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+        run: |
+          if (-not $env:CLIENT_ID) {
+            Write-Warning 'Secret CLIENT_ID is empty - the build will ship without a working ESI login.'
+            exit 0
+          }
+          $path = 'EVEData/EveAppConfig.cs'
+          $src = Get-Content $path -Raw
+          $patched = $src -replace '(?<=const string ClientID = ")[^"]*(?=";)', $env:CLIENT_ID
+          if ($patched -eq $src) { throw "Could not find the ClientID placeholder in $path" }
+          Set-Content -Path $path -Value $patched -NoNewline
+          Write-Host 'ClientID injected from repository secret.'
+
+      - name: Publish (self-contained win-x64)
+        run: >
+          dotnet publish SMT/SMT.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -o publish/SMT
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = Get-ChildItem -Path 'C:\Program Files (x86)\Inno Setup 6', 'C:\Program Files\Inno Setup 6' `
+                                -Filter 'ISCC.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $iscc) { throw 'ISCC.exe not found - Inno Setup install failed' }
+          & $iscc.FullName /DMyAppVersion=${{ steps.ver.outputs.version }} Setup\InnoSetup\SMT.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: OMT_Setup_${{ steps.ver.outputs.version }}
+          path: Setup/Output/*.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $asset = (Get-ChildItem Setup/Output/*.exe | Select-Object -First 1).FullName
+          $tag = $env:GITHUB_REF_NAME
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists - attaching installer"
+            gh release upload $tag $asset --clobber
+          } else {
+            Write-Host "Creating release $tag"
+            gh release create $tag $asset --title "OMT $tag" --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Failed to publish release $tag" }

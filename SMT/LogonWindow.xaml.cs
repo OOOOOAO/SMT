@@ -32,7 +32,13 @@ namespace SMT
                 string challengeCode = EVEDataUtils.Misc.RandomString(32);
                 string esiLogonURL = EVEData.EveManager.Instance.GetESILogonURL(challengeCode);
 
-                listener.Prefixes.Add(EVEData.EveAppConfig.CallbackURL);
+                // The redirect_uri registered with CCP has no trailing slash, but an HttpListener
+                // prefix must end in one. HTTP.sys still routes the slashless callback here.
+                string callbackPrefix = EVEData.EveAppConfig.CallbackURL.EndsWith('/')
+                    ? EVEData.EveAppConfig.CallbackURL
+                    : EVEData.EveAppConfig.CallbackURL + "/";
+
+                listener.Prefixes.Add(callbackPrefix);
                 listener.Start();
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(esiLogonURL) { UseShellExecute = true });
 

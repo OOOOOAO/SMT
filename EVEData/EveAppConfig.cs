@@ -26,7 +26,7 @@ namespace SMT.EVEData
         /// <summary>
         /// SMT Version
         /// </summary>
-        public const string SMT_VERSION = "v1.0.1";
+        public const string SMT_VERSION = "v1.1.0";
 
 
         /// <summary>

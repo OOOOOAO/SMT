@@ -675,6 +675,17 @@
                                 <Grid x:Name="MainBookmarkRouteGrid">
                                     <ScrollViewer Background="{DynamicResource DarkBackgroundBrush}">
                                         <StackPanel>
+                                            <GroupBox Header="{DynamicResource Main_BM_GrpStart}">
+                                                <StackPanel Margin="4">
+                                                    <StackPanel Orientation="Horizontal" Margin="2">
+                                                        <dotNetKitControls:AutoCompleteComboBox x:Name="BookmarkStartSystemDropDownAC" TextSearch.TextPath="LocalizedName" FontSize="12" Width="156" SelectionChanged="BookmarkStartSystemDropDownAC_SelectionChanged" />
+                                                        <Button x:Name="UseSelectedBookmarkStartBtn" Click="UseSelectedBookmarkStartBtn_Click" Content="{DynamicResource Main_BM_BtnUseSelected}" Margin="2" />
+                                                    </StackPanel>
+                                                    <CheckBox x:Name="bookmarkStartUseSelectedChk" Content="{DynamicResource Main_BM_ChkFollowSelected}" Margin="2" Checked="BookmarkStartOption_Changed" Unchecked="BookmarkStartOption_Changed" />
+                                                    <Label x:Name="bookmarkStartInfoLbl" Content="" Margin="2" />
+                                                </StackPanel>
+                                            </GroupBox>
+
                                             <GroupBox Header="{DynamicResource Main_BM_GrpInput}">
                                                 <StackPanel Margin="4">
                                                     <TextBox x:Name="bookmarkInputTextBox" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap" Height="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="2" />
@@ -717,7 +728,10 @@
                                                 </StackPanel>
                                             </GroupBox>
 
-                                            <Button x:Name="CalculateBookmarkRouteBtn" Click="CalculateBookmarkRouteBtn_Click" Content="{DynamicResource Main_BM_BtnCalculate}" Margin="2" />
+                                            <StackPanel Orientation="Horizontal" Margin="2">
+                                                <Button x:Name="CalculateBookmarkRouteBtn" Click="CalculateBookmarkRouteBtn_Click" Content="{DynamicResource Main_BM_BtnCalculate}" Margin="2" />
+                                                <Button x:Name="ClearBookmarkRouteBtn" Click="ClearBookmarkRouteBtn_Click" Content="{DynamicResource Main_BM_BtnClear}" Margin="2" />
+                                            </StackPanel>
                                             <Label x:Name="bookmarkRouteStatusLbl" Content="" Margin="2" />
 
                                             <StackPanel x:Name="bookmarkLinesPanel" Margin="2" />

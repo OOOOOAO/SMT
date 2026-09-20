@@ -21,6 +21,7 @@ namespace SMT.EVEData
                 ("isolated targets are dropped, and only when the filter is on", CheckIsolatedTargetDropped),
                 ("discard rate counts what the plan left behind", CheckDiscardRate),
                 ("a bookmark-heavy system survives the isolation filter", CheckBookmarkHeavyTargetKept),
+                ("an excluded start system stays usable", CheckExcludedStartStaysUsable),
             };
 
             bool allPassed = true;
@@ -362,6 +363,58 @@ namespace SMT.EVEData
             Assert(
                 dropped.IsolatedSystems.Count == 1 && dropped.IsolatedSystems[0] == "Z",
                 $"with the threshold at 4, Z's 3 bookmarks shouldn't save it : dropped [{string.Join(",", dropped.IsolatedSystems)}]");
+        }
+
+        /// <summary>
+        /// The start is kept as a graph node even when the avoid / high-sec filters would drop it : the
+        /// user picks the start freely now, and "start from the system I'm sitting in" has to work even
+        /// when that system is high sec or is on the user's own avoid list. Its neighbours still obey the
+        /// filters, so the route leaves the excluded start without ever transiting another excluded
+        /// system -- and nothing can route *through* the start either, which leaves the solver a start
+        /// node with outgoing edges and no incoming ones. That asymmetry is deliberate, not an accident.
+        /// </summary>
+        private static void CheckExcludedStartStaysUsable()
+        {
+            List<System> systems = new List<System>
+            {
+                NewSystem("HiSec", 0.9, "HiSec2", "Low"),
+                NewSystem("HiSec2", 0.8, "HiSec"),
+                NewSystem("Low", 0.2, "HiSec", "Null"),
+                NewSystem("Null", -0.4, "Low"),
+            };
+            Dictionary<string, System> byName = systems.ToDictionary(s => s.Name, s => s);
+
+            Dictionary<string, List<string>> adjacency = BookmarkRouteAdapter.BuildAdjacency(
+                systems, name => byName.TryGetValue(name, out System found) ? found : null, true, new HashSet<string>(), "HiSec");
+
+            Assert(adjacency.ContainsKey("HiSec"), "the high sec start must stay in the graph as a node");
+            Assert(!adjacency.ContainsKey("HiSec2"), "a high sec system that isn't the start must stay excluded");
+            Assert(
+                adjacency["HiSec"].Contains("Low") && !adjacency["HiSec"].Contains("HiSec2"),
+                "the start's own high sec neighbour must still be filtered out of its neighbour list");
+            Assert(
+                !adjacency["Low"].Contains("HiSec"),
+                "nothing may route *through* the excluded start, so no other system lists it as a neighbour");
+
+            BookmarkRoute route = BookmarkRouteSolver.Solve(
+                adjacency, (a, b) => 999m, "HiSec", new List<string> { "Null" },
+                new Dictionary<string, int> { ["Null"] = 1 }, new List<string>(), 2, 5, 6m, 0, 0);
+
+            Assert(
+                route.UnreachableSystems.Count == 0,
+                $"the null sec target is 2 gate jumps from the start, so it must be reachable : [{string.Join(",", route.UnreachableSystems)}]");
+            Assert(route.PlannedTargets == 1, $"expected the target to be planned, got {route.PlannedTargets}");
+        }
+
+        private static System NewSystem(string name, double trueSec, params string[] jumps)
+        {
+            System sys = new System(name, 1, "Test", false, false) { TrueSec = trueSec };
+            foreach (string jump in jumps)
+            {
+                sys.Jumps.Add(jump);
+            }
+
+            return sys;
         }
 
         private static void CheckTwoOptOnAsymmetricCost()

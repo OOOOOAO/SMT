@@ -27,8 +27,145 @@ namespace SMT
         private void InitBookmarkRoutePanel(List<EVEData.System> globalSystemList)
         {
             BookmarkAvoidSystemDropDownAC.ItemsSource = globalSystemList;
+            BookmarkStartSystemDropDownAC.ItemsSource = globalSystemList;
             bookmarkRoutePanelReady = true;
             OnSelectedCharChangedEventHandler += (s, e) => SwitchBookmarkRouteCharacter();
+
+            // The map's own selection changes under us (click, dropdown, follow-character), so the
+            // start line has to be refreshed from outside : nothing in this panel triggers it.
+            RegionUC.SelectedSystemChanged += OnMapSelectedSystemChanged;
+
+            UpdateBookmarkStartInfo();
+        }
+
+        /// <summary>
+        /// The system a calculation starts from, in precedence order : the map's selected system when
+        /// the panel is set to follow it, else the system picked in the panel, else wherever the active
+        /// character is. Null when none of those resolve, which the caller reports instead of guessing.
+        /// </summary>
+        private string ResolveBookmarkStartSystem(out string source)
+        {
+            if (bookmarkStartUseSelectedChk.IsChecked == true && !string.IsNullOrEmpty(RegionUC.SelectedSystem))
+            {
+                source = GetResourceText("Main_BM_StartFromMap", "map selection");
+                return RegionUC.SelectedSystem;
+            }
+
+            EVEData.System picked = BookmarkStartSystemDropDownAC.SelectedItem as EVEData.System;
+            if (picked == null)
+            {
+                // Nothing chosen off the list, but the box is editable : a typed name is a legitimate
+                // start, and silently planning from somewhere else would look like it worked.
+                string typed = BookmarkStartSystemDropDownAC.Text;
+                if (!string.IsNullOrWhiteSpace(typed))
+                {
+                    picked = EVEManager.GetEveSystem(typed.Trim());
+                }
+            }
+
+            if (picked != null)
+            {
+                source = GetResourceText("Main_BM_StartFromPanel", "panel selection");
+                return picked.Name;
+            }
+
+            source = GetResourceText("Main_BM_StartFromChar", "character location");
+            return RegionUC.ActiveCharacter?.Location;
+        }
+
+        private void UpdateBookmarkStartInfo()
+        {
+            if (!bookmarkRoutePanelReady)
+            {
+                return;
+            }
+
+            string start = ResolveBookmarkStartSystem(out string source);
+
+            if (string.IsNullOrEmpty(start))
+            {
+                bookmarkStartInfoLbl.Content = GetResourceText("Main_BM_LblStartNone", "Start : not set");
+                return;
+            }
+
+            // Via a local, like the capital-route summary above : passing the resource straight into
+            // string.Format trips CA1863.
+            string format = GetResourceText("Main_BM_LblStartFmt", "Start : {0}  ({1})");
+            bookmarkStartInfoLbl.Content = string.Format(CultureInfo.CurrentCulture, format, start, source);
+        }
+
+        private void OnMapSelectedSystemChanged(string system)
+        {
+            UpdateBookmarkStartInfo();
+
+            // Nothing recalculates on a map click : browsing the map would re-plan on every click, and a
+            // followed character would re-plan on every gate jump. Say the route is stale instead of
+            // leaving one on screen that quietly starts somewhere else.
+            if (bookmarkRouteResult != null)
+            {
+                string start = ResolveBookmarkStartSystem(out _);
+                if (!string.IsNullOrEmpty(start) && !string.Equals(start, bookmarkRouteStartSystem, StringComparison.OrdinalIgnoreCase))
+                {
+                    bookmarkRouteStatusLbl.Content = GetResourceText("Main_BM_MsgStartChanged", "Start changed : recalculate to update the route.");
+                }
+            }
+        }
+
+        private void BookmarkStartSystemDropDownAC_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!bookmarkRoutePanelReady)
+            {
+                return;
+            }
+
+            // Label only, deliberately : an editable auto-complete box can raise this while the user is
+            // still typing, and every raise would be a full replan. The start is applied by the Calculate
+            // button (or by the "use selected system" button, which is an explicit click), and the status
+            // line says so when the plan on screen no longer matches the start shown here.
+            UpdateBookmarkStartInfo();
+        }
+
+        private void UseSelectedBookmarkStartBtn_Click(object sender, RoutedEventArgs e)
+        {
+            string selected = RegionUC.SelectedSystem;
+            if (string.IsNullOrEmpty(selected))
+            {
+                bookmarkRouteStatusLbl.Content = GetResourceText("Main_BM_MsgNoMapSelection", "No system is selected on the map.");
+                return;
+            }
+
+            // Assign the item and the text : the box is editable, so a stale typed name could otherwise
+            // outlive the pick, and re-assigning the item that's already selected raises nothing.
+            BookmarkStartSystemDropDownAC.SelectedItem = EVEManager.GetEveSystem(selected);
+            BookmarkStartSystemDropDownAC.Text = selected;
+
+            UpdateBookmarkStartInfo();
+
+            if (!string.IsNullOrWhiteSpace(bookmarkInputTextBox?.Text))
+            {
+                RunBookmarkRouteCalculation();
+            }
+        }
+
+        private void BookmarkStartOption_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!bookmarkRoutePanelReady)
+            {
+                return;
+            }
+
+            // Following the map makes the picker meaningless, and leaving it editable would leave two
+            // controls claiming to own the start.
+            BookmarkStartSystemDropDownAC.IsEnabled = bookmarkStartUseSelectedChk.IsChecked != true;
+
+            UpdateBookmarkStartInfo();
+
+            // A toggle is a deliberate change of the start, unlike a map click while the box is ticked
+            // (which only marks the plan stale) or a keystroke in the picker.
+            if (!string.IsNullOrWhiteSpace(bookmarkInputTextBox?.Text))
+            {
+                RunBookmarkRouteCalculation();
+            }
         }
 
         private void SwitchBookmarkRouteCharacter()
@@ -65,6 +202,8 @@ namespace SMT
             {
                 ClearBookmarkRoutePanelDisplay();
             }
+
+            UpdateBookmarkStartInfo();
         }
 
         private void ClearBookmarkRoutePanelDisplay()
@@ -74,7 +213,13 @@ namespace SMT
             bookmarkLinesPanel.Children.Clear();
             bookmarkRouteStatusLbl.Content = "";
             bookmarkUnreachableText.Text = "";
+            bookmarkIsolatedText.Text = "";
             bookmarkUnparsedText.Text = "";
+
+            // The headers carry the counts, so they'd keep advertising a plan that's gone.
+            bookmarkUnreachableGroupBox.Header = GetResourceText("Main_BM_GrpUnreachable", "Unreachable");
+            bookmarkIsolatedGroupBox.Header = GetResourceText("Main_BM_GrpIsolated", "Isolated, dropped");
+            bookmarkUnparsedGroupBox.Header = GetResourceText("Main_BM_GrpUnparsed", "Unparsed");
 
             // Clear the map overlay : RegionControl/UniverseControl draw whatever's in these
             // properties, independently of ActiveRoute/CapitalRoute, so they need clearing explicitly.
@@ -84,6 +229,22 @@ namespace SMT
             UniverseUC.BookmarkRouteStartSystem = null;
             RegionUC.ReDrawMap();
             UniverseUC.ReDrawMap(false, false, true);
+        }
+
+        private void ClearBookmarkRouteBtn_Click(object sender, RoutedEventArgs e)
+        {
+            // Drop the cached copy for this character too : leaving it would restore the very plan this
+            // button just cleared the next time the user switches characters away and back.
+            if (bookmarkRouteCacheOwnerId.HasValue)
+            {
+                bookmarkRouteCache.Remove(bookmarkRouteCacheOwnerId.Value);
+            }
+
+            // Anything already in flight belongs to the plan being cleared.
+            bookmarkCalcGeneration++;
+
+            ClearBookmarkRoutePanelDisplay();
+            bookmarkRouteStatusLbl.Content = GetResourceText("Main_BM_MsgCleared", "Planned route cleared.");
         }
 
         private void BookmarkDropIsolatedChk_Click(object sender, RoutedEventArgs e)
@@ -154,20 +315,27 @@ namespace SMT
                 return;
             }
 
-            EVEData.LocalCharacter character = RegionUC.ActiveCharacter;
-            if (character == null || string.IsNullOrEmpty(character.Location))
-            {
-                bookmarkRouteStatusLbl.Content = "No active character.";
-                return;
-            }
-
             string text = bookmarkInputTextBox.Text;
             if (string.IsNullOrWhiteSpace(text))
             {
                 return;
             }
 
-            string startSystem = character.Location;
+            // A character is no longer required to plan : the start is whatever the panel says it is,
+            // and the character is only one of the places that can come from.
+            string startSystem = ResolveBookmarkStartSystem(out _);
+            if (string.IsNullOrEmpty(startSystem))
+            {
+                bookmarkRouteStatusLbl.Content = GetResourceText("Main_BM_MsgNoStart", "No start system : pick one, or log in a character.");
+                return;
+            }
+
+            if (EVEManager.GetEveSystem(startSystem) == null)
+            {
+                bookmarkRouteStatusLbl.Content = $"Unknown start system : {startSystem}";
+                return;
+            }
+
             int k = (int)bookmarkKSlider.Value;
             int jumpCost = (int)bookmarkJSlider.Value;
 
@@ -206,12 +374,14 @@ namespace SMT
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
+                    // Re-enabled before the superseded check : a calculation that lost the race still owns
+                    // the disabled button it set when it started, and nothing else would turn it back on.
+                    CalculateBookmarkRouteBtn.IsEnabled = true;
+
                     if (generation != bookmarkCalcGeneration)
                     {
                         return; // superseded by a newer calculation (e.g. rapid K slider drags)
                     }
-
-                    CalculateBookmarkRouteBtn.IsEnabled = true;
 
                     if (error != null)
                     {
@@ -233,7 +403,7 @@ namespace SMT
             int totalSystems = result.BookmarkCounts.Count;
             bookmarkRouteStatusLbl.Content = totalSystems == 0
                 ? "No systems parsed from the pasted text."
-                : $"{result.Lines.Count} line(s) · {result.PlannedTargets}/{result.TotalTargets} systems · {result.PlannedBookmarks}/{result.TotalBookmarks} bookmarks · {result.BookmarkDiscardRate:P0} discarded";
+                : $"Start {bookmarkRouteStartSystem} · {result.Lines.Count} line(s) · {result.PlannedTargets}/{result.TotalTargets} systems · {result.PlannedBookmarks}/{result.TotalBookmarks} bookmarks · {result.BookmarkDiscardRate:P0} discarded";
 
             for (int i = 0; i < result.Lines.Count; i++)
             {

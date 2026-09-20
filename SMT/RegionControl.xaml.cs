@@ -267,7 +267,32 @@ namespace SMT
 
         public EVEData.MapRegion Region { get; set; }
 
-        public string SelectedSystem { get; set; }
+        public string SelectedSystem
+        {
+            get
+            {
+                return m_SelectedSystem;
+            }
+            set
+            {
+                if(m_SelectedSystem == value)
+                {
+                    return;
+                }
+
+                m_SelectedSystem = value;
+
+                // The bookmark route panel takes its start system from here, so it has to hear about it.
+                // Deliberately not routed through PropertyChanged : MapObjectChanged redraws the whole map
+                // for any property that fires, and a selection change already redraws what it needs to.
+                SelectedSystemChanged?.Invoke(m_SelectedSystem);
+            }
+        }
+
+        private string m_SelectedSystem;
+
+        /// <summary>Raised with the new system name whenever the map's selected system changes.</summary>
+        public event Action<string> SelectedSystemChanged;
 
         public bool ShowJumpBridges
         {

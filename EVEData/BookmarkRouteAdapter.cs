@@ -19,7 +19,7 @@ namespace SMT.EVEData
                 ? new HashSet<string>(avoidSystems, StringComparer.OrdinalIgnoreCase)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            Dictionary<string, List<string>> adjacency = BuildAdjacency(avoidHighSec, avoid);
+            Dictionary<string, List<string>> adjacency = BuildAdjacency(EveManager.Instance.Systems, EveManager.Instance.GetEveSystem, avoidHighSec, avoid, startSystem);
 
             return BookmarkRouteSolver.Solve(
                 adjacency,
@@ -43,13 +43,23 @@ namespace SMT.EVEData
 
         // Builds the gate graph with excluded systems (highsec / avoid list) dropped entirely, as both a
         // key and a neighbour, so the BFS can never route through or land on one.
-        private static Dictionary<string, List<string>> BuildAdjacency(bool avoidHighSec, HashSet<string> avoid)
+        //
+        // The start is the one exception : it's kept as a node even when the filters exclude it. The user
+        // picks the start freely now, and "start from the system I'm actually sitting in" is the whole
+        // point -- refusing to route out of a system that happens to be high sec, or that the user put on
+        // their own avoid list, would be worse than routing out of it. Its neighbours still obey the
+        // filters, so a route leaves an excluded start without ever transiting another excluded system.
+        //
+        // Takes the system list and the name resolver as arguments rather than reading EveManager, so the
+        // start-exemption rule can be self-checked against a synthetic galaxy (see BookmarkRouteSelfCheck).
+        internal static Dictionary<string, List<string>> BuildAdjacency(
+            IEnumerable<System> systems, Func<string, System> resolveSystem, bool avoidHighSec, HashSet<string> avoid, string startSystem)
         {
             Dictionary<string, List<string>> adjacency = new Dictionary<string, List<string>>();
 
-            foreach (System sys in EveManager.Instance.Systems)
+            foreach (System sys in systems)
             {
-                if (IsExcluded(sys, avoidHighSec, avoid))
+                if (IsExcluded(sys, avoidHighSec, avoid) && !IsStart(sys, startSystem))
                 {
                     continue;
                 }
@@ -57,7 +67,7 @@ namespace SMT.EVEData
                 List<string> neighbours = new List<string>();
                 foreach (string jump in sys.Jumps)
                 {
-                    System neighbourSys = EveManager.Instance.GetEveSystem(jump);
+                    System neighbourSys = resolveSystem(jump);
                     if (neighbourSys == null || IsExcluded(neighbourSys, avoidHighSec, avoid))
                     {
                         continue;
@@ -70,6 +80,13 @@ namespace SMT.EVEData
             }
 
             return adjacency;
+        }
+
+        // The start is matched case-insensitively to agree with NameToSystem, which GetEveSystem reads.
+        private static bool IsStart(System sys, string startSystem)
+        {
+            return !string.IsNullOrEmpty(startSystem) &&
+                string.Equals(sys.Name, startSystem, StringComparison.OrdinalIgnoreCase);
         }
 
         // TrueSec > 0.45 matches Navigation.InitNavigation's own HighSec flag and CreateStaticNavigationCache's

@@ -17,6 +17,7 @@ namespace SMT.EVEData
                 ("parser takes column 3, not a name-column decoy", CheckParserColumnPriority),
                 ("a jump is allowed on the first leg, out of the start", CheckJumpFromStart),
                 ("2-opt never worsens a tour on an asymmetric matrix", CheckTwoOptOnAsymmetricCost),
+                ("the tour search finds the optimum where 2-opt gets stuck", CheckTourSearchReachesOptimum),
                 ("jump cost stops jumps chaining back to back", CheckNoChainedJumps),
                 ("isolated targets are dropped, and only when the filter is on", CheckIsolatedTargetDropped),
                 ("discard rate counts what the plan left behind", CheckDiscardRate),
@@ -201,10 +202,11 @@ namespace SMT.EVEData
         }
 
         /// <summary>
-        /// The cost matrix is not symmetric, so 2-opt has to score candidates by re-measuring the whole
-        /// tour. Here the two boundary edges look 18 cheaper after the swap (10+10 becomes 1+1), but reversing
-        /// the segment flips the interior edge from cost 1 to cost 100 -- which the old two-edge delta never
-        /// looked at. It would swap 21 into 102 and keep going ; the fixed version leaves the tour alone.
+        /// The cost matrix is not symmetric, so 2-opt has to price the interior of the segment it reverses,
+        /// not just its two boundary edges. Here the two boundary edges look 18 cheaper after the swap (10+10
+        /// becomes 1+1), but reversing the segment flips the interior edge from cost 1 to cost 100 -- which the
+        /// old two-edge delta never looked at. It would swap 21 into 102 and keep going ; the fixed version
+        /// leaves the tour alone.
         /// </summary>
         /// <summary>
         /// Modelled on a real case from Branch that the user hit: KJ-QWL and 5-P1Y2 are 2 gates apart, but each
@@ -446,6 +448,92 @@ namespace SMT.EVEData
             Assert(
                 final <= initial,
                 $"2-opt made the tour worse: {initial} -> {final} (it accepted a swap without measuring the interior edge it reversed)");
+        }
+
+        /// <summary>
+        /// 2-opt alone left a live 25-system plan with a two-jump detour to one target and a jump over a target
+        /// that it then jumped back to, and putting the start system on the avoid list gave a different, equally
+        /// wrong plan : the search stopped in whichever local optimum the nearest-neighbour seed led to. On
+        /// random asymmetric 8-node matrices (with unreachable cells, as the real one has) 2-opt from a plain
+        /// starting order reaches the true optimum about 1 time in 20. The full search must reach it every
+        /// time, and no step of it may ever make a tour worse. Seeded, so a failure reproduces.
+        /// </summary>
+        private static void CheckTourSearchReachesOptimum()
+        {
+            const int n = 8;
+            for (int seed = 0; seed < 100; seed++)
+            {
+                Random random = new Random(seed);
+                int[,] cost = new int[n, n];
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < n; j++)
+                    {
+                        cost[i, j] = i == j ? 0 : random.Next(12) == 0 ? int.MaxValue : random.Next(1, 30) * 100;
+                    }
+                }
+
+                List<int> tour = new List<int>();
+                for (int i = 0; i < n; i++)
+                {
+                    tour.Add(i);
+                }
+
+                long initial = BookmarkRouteSolver.TourCost(cost, tour);
+                BookmarkRouteSolver.TwoOptImprove(cost, tour);
+                long afterTwoOpt = BookmarkRouteSolver.TourCost(cost, tour);
+                BookmarkRouteSolver.OrOptImprove(cost, tour);
+                long afterOrOpt = BookmarkRouteSolver.TourCost(cost, tour);
+                Assert(
+                    afterTwoOpt <= initial && afterOrOpt <= afterTwoOpt,
+                    $"seed {seed}: a move made the tour worse : {initial} -> 2-opt {afterTwoOpt} -> Or-opt {afterOrOpt}");
+
+                BookmarkRouteSolver.ImproveTour(cost, tour);
+
+                HashSet<int> visited = new HashSet<int>(tour);
+                Assert(
+                    tour.Count == n && visited.Count == n && tour[0] == 0,
+                    $"seed {seed}: the tour is no longer the start followed by every target once : [{string.Join(",", tour)}]");
+
+                long optimum = BruteForceTourCost(cost, n);
+                long found = BookmarkRouteSolver.TourCost(cost, tour);
+                Assert(found == optimum, $"seed {seed}: the search stopped at {found}, the best tour costs {optimum}");
+            }
+        }
+
+        /// <summary>Cheapest open tour from node 0 through every other node, by trying every order.</summary>
+        private static long BruteForceTourCost(int[,] cost, int n)
+        {
+            List<int> order = new List<int> { 0 };
+            bool[] used = new bool[n];
+            used[0] = true;
+            long best = long.MaxValue;
+
+            void Extend()
+            {
+                if (order.Count == n)
+                {
+                    best = Math.Min(best, BookmarkRouteSolver.TourCost(cost, order));
+                    return;
+                }
+
+                for (int next = 1; next < n; next++)
+                {
+                    if (used[next])
+                    {
+                        continue;
+                    }
+
+                    used[next] = true;
+                    order.Add(next);
+                    Extend();
+                    order.RemoveAt(order.Count - 1);
+                    used[next] = false;
+                }
+            }
+
+            Extend();
+            return best;
         }
 
         private static void CheckParserColumnPriority()

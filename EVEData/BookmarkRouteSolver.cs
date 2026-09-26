@@ -214,7 +214,7 @@ namespace SMT.EVEData
             }
 
             List<int> tour = NearestNeighbourTour(cost, activeIdx);
-            TwoOptImprove(cost, tour);
+            ImproveTour(cost, tour);
 
             BuildLines(result, nodes, ly, isJump, prev, tour);
 
@@ -347,22 +347,116 @@ namespace SMT.EVEData
         }
 
         /// <summary>
-        /// Open-path 2-opt : start (index 0) fixed, end free. Iterates to a local optimum or a safety cap.
+        /// Takes the nearest-neighbour tour to a much better local optimum than 2-opt alone reaches.
         ///
-        /// Scores every candidate by re-measuring the whole tour instead of using the usual O(1) two-edge delta.
-        /// That delta is only valid on a symmetric matrix and this one is not : emptyRun(i,j) is read off the BFS
-        /// tree rooted at i while emptyRun(j,i) comes off the tree rooted at j, so when a pair has more than one
-        /// shortest gate path the two directions can disagree about whether the leg is jump-eligible. Reversing a
-        /// segment flips every interior edge, which the delta form never looks at, so it can accept a swap that
-        /// makes the tour worse. Re-measuring costs O(n) per candidate, which at these sizes is nothing.
+        /// 2-opt only ever reverses a stretch of the tour. It cannot pick up one target and put it somewhere
+        /// else, which is the move a stranded target needs : on a live 25-system paste it left
+        /// KL3O-J -> jump -> I-7RIS -> jump -> BWI1-9 (a two-jump detour for one system) and
+        /// C-LP3N -> jump -> 4-48K1 -> jump back -> 0P9Z-I in the plan. Or-opt moves 1..3 consecutive
+        /// targets to their cheapest slot, which is exactly that move, and the two alternate until neither
+        /// helps.
+        ///
+        /// A local optimum is still only local, and which one the search lands in depends on where it
+        /// started : putting the start system on the avoid list changed a few gate distances, the
+        /// nearest-neighbour seed with them, and the plan came out visibly different although the best tour
+        /// was the same one in both cases. So the local optimum is then kicked (double bridge) and re-searched
+        /// a bounded number of times, keeping the best. The generator is seeded, so the same paste and settings
+        /// always give the same plan.
         /// </summary>
-        internal static void TwoOptImprove(int[,] cost, List<int> tour)
+        internal static void ImproveTour(int[,] cost, List<int> tour)
+        {
+            long best = LocalSearch(cost, tour);
+
+            // A double bridge needs four distinct cut points after the fixed start.
+            int n = tour.Count;
+            if (n < 5)
+            {
+                return;
+            }
+
+            // Each round is a full local search, O(n^2) per pass, so the round count shrinks as the tour grows
+            // to keep a large paste from stalling the panel. 100 rounds at the usual 25..100 targets.
+            int rounds = Math.Clamp(2_000_000 / (n * n), 5, 100);
+            Random random = new Random(20260926);
+
+            for (int round = 0; round < rounds; round++)
+            {
+                List<int> candidate = DoubleBridge(tour, random);
+                long candidateCost = LocalSearch(cost, candidate);
+
+                if (candidateCost < best)
+                {
+                    best = candidateCost;
+                    tour.Clear();
+                    tour.AddRange(candidate);
+                }
+            }
+        }
+
+        /// <summary>2-opt and Or-opt in turn until neither finds anything. Returns the final tour cost.</summary>
+        internal static long LocalSearch(int[,] cost, List<int> tour)
+        {
+            const int maxIterations = 1000; // ponytail: guards pathological inputs
+            for (int iterations = 0; iterations < maxIterations; iterations++)
+            {
+                bool improved = TwoOptImprove(cost, tour);
+                improved |= OrOptImprove(cost, tour);
+
+                if (!improved)
+                {
+                    break;
+                }
+            }
+
+            return TourCost(cost, tour);
+        }
+
+        /// <summary>
+        /// Cuts the open tour into start + A B C D + tail and reorders it to start + C B A + D-and-tail. No
+        /// 2-opt or Or-opt move undoes this in one step, which is what lets the next local search leave the
+        /// optimum it was stuck in.
+        /// </summary>
+        private static List<int> DoubleBridge(List<int> tour, Random random)
+        {
+            int n = tour.Count;
+
+            // Four distinct cut points in 1..n : a < b < c < d. d == n puts the whole tail in the last segment.
+            SortedSet<int> cuts = new SortedSet<int>();
+            while (cuts.Count < 4)
+            {
+                cuts.Add(random.Next(1, n + 1));
+            }
+
+            int[] c = new int[4];
+            cuts.CopyTo(c);
+
+            List<int> result = new List<int>(n);
+            result.AddRange(tour.GetRange(0, c[0]));
+            result.AddRange(tour.GetRange(c[2], c[3] - c[2]));
+            result.AddRange(tour.GetRange(c[1], c[2] - c[1]));
+            result.AddRange(tour.GetRange(c[0], c[1] - c[0]));
+            result.AddRange(tour.GetRange(c[3], n - c[3]));
+            return result;
+        }
+
+        /// <summary>
+        /// Open-path 2-opt : start (index 0) fixed, end free. Iterates to a local optimum or a safety cap.
+        /// Returns whether it changed the tour.
+        ///
+        /// The matrix is not symmetric : emptyRun(i,j) is read off the BFS tree rooted at i while emptyRun(j,i)
+        /// comes off the tree rooted at j, so when a pair has more than one shortest gate path the two directions
+        /// can disagree about whether the leg is jump-eligible. Reversing a segment flips every interior edge,
+        /// so the usual two-boundary-edge delta is wrong here : it never looks at the interior and can accept a
+        /// swap that makes the tour worse (D27). The delta below does price the interior, both ways round,
+        /// accumulated as j walks outwards, so it stays exact at O(1) per candidate.
+        /// </summary>
+        internal static bool TwoOptImprove(int[,] cost, List<int> tour)
         {
             const int maxIterations = 1000; // ponytail: guards pathological inputs
             int n = tour.Count;
+            bool changed = false;
             bool improved = true;
             int iterations = 0;
-            long best = TourCost(cost, tour);
 
             while (improved && iterations < maxIterations)
             {
@@ -371,23 +465,140 @@ namespace SMT.EVEData
 
                 for (int i = 1; i < n - 1; i++)
                 {
+                    long forward = 0;
+                    long backward = 0;
+
                     for (int j = i + 1; j < n; j++)
                     {
-                        tour.Reverse(i, j - i + 1);
-                        long candidate = TourCost(cost, tour);
+                        // Interior edges of tour[i..j], as walked now and as walked after the reversal.
+                        forward += cost[tour[j - 1], tour[j]];
+                        backward += cost[tour[j], tour[j - 1]];
 
-                        if (candidate < best)
+                        long before = cost[tour[i - 1], tour[i]] + forward;
+                        long after = cost[tour[i - 1], tour[j]] + backward;
+                        if (j + 1 < n)
                         {
-                            best = candidate;
-                            improved = true;
+                            before += cost[tour[j], tour[j + 1]];
+                            after += cost[tour[i], tour[j + 1]];
                         }
-                        else
+
+                        if (after < before)
                         {
                             tour.Reverse(i, j - i + 1);
+                            improved = true;
+                            changed = true;
+
+                            // The sums were for the old order of this stretch.
+                            forward = 0;
+                            backward = 0;
+                            for (int p = i + 1; p <= j; p++)
+                            {
+                                forward += cost[tour[p - 1], tour[p]];
+                                backward += cost[tour[p], tour[p - 1]];
+                            }
                         }
                     }
                 }
             }
+
+            return changed;
+        }
+
+        /// <summary>
+        /// Or-opt : moves a run of 1..3 consecutive targets to the slot where it costs least, as is or reversed.
+        /// Takes the first improving move and rescans, until no move improves. Returns whether it changed the tour.
+        ///
+        /// Exact at O(1) per candidate on the asymmetric matrix : the run's interior edges keep their direction
+        /// unless the run is reversed, and a reversed run's interior is priced both ways round explicitly.
+        /// </summary>
+        internal static bool OrOptImprove(int[,] cost, List<int> tour)
+        {
+            const int maxMoves = 10000; // ponytail: guards pathological inputs
+            int n = tour.Count;
+            bool changed = false;
+
+            for (int moves = 0; moves < maxMoves; moves++)
+            {
+                if (!TryOrOptMove(cost, tour, n))
+                {
+                    break;
+                }
+
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool TryOrOptMove(int[,] cost, List<int> tour, int n)
+        {
+            for (int len = 1; len <= 3; len++)
+            {
+                for (int i = 1; i + len <= n; i++)
+                {
+                    int last = i + len - 1;
+                    int first = tour[i];
+                    int end = tour[last];
+                    int before = tour[i - 1];
+                    bool hasAfter = last + 1 < n;
+                    int after = hasAfter ? tour[last + 1] : -1;
+
+                    // What taking the run out saves : its two boundary edges, less the edge that closes the gap.
+                    long removed = cost[before, first];
+                    if (hasAfter)
+                    {
+                        removed += (long)cost[end, after] - cost[before, after];
+                    }
+
+                    long interiorForward = 0;
+                    long interiorBackward = 0;
+                    for (int p = i; p < last; p++)
+                    {
+                        interiorForward += cost[tour[p], tour[p + 1]];
+                        interiorBackward += cost[tour[p + 1], tour[p]];
+                    }
+
+                    // Insert between tour[p] and its successor in the tour with the run taken out. p == i - 1 is
+                    // where the run already sits, and p inside the run is not a slot at all.
+                    for (int p = 0; p < n; p++)
+                    {
+                        if (p >= i - 1 && p <= last)
+                        {
+                            continue;
+                        }
+
+                        int a = tour[p];
+                        bool hasB = p + 1 < n;
+                        int b = hasB ? tour[p + 1] : -1;
+
+                        // long throughout : two Unreachable cells would overflow an int sum.
+                        long gap = hasB ? cost[a, b] : 0L;
+                        long asIs = (long)cost[a, first] + (hasB ? cost[end, b] : 0L) - gap;
+                        long reversed = len > 1
+                            ? (long)cost[a, end] + (hasB ? cost[first, b] : 0L) - gap + interiorBackward - interiorForward
+                            : long.MaxValue;
+
+                        bool reverse = reversed < asIs;
+                        long added = reverse ? reversed : asIs;
+
+                        if (added < removed)
+                        {
+                            List<int> run = tour.GetRange(i, len);
+                            if (reverse)
+                            {
+                                run.Reverse();
+                            }
+
+                            tour.RemoveRange(i, len);
+                            int insertAt = (p < i ? p : p - len) + 1;
+                            tour.InsertRange(insertAt, run);
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static void BuildLines(
